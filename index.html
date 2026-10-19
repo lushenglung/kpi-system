@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每月工時 & KPI 自動填表系統 (Google 雲端版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .step-badge { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .badge-workday { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; font-weight: 700; cursor: pointer; transition: all 0.2s;}
+    .badge-workday:hover { background-color: #d1fae5; transform: scale(1.05); }
+    .badge-holiday { background-color: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: pointer; text-decoration: line-through; transition: all 0.2s;}
+    .badge-holiday:hover { background-color: #e2e8f0; color: #64748b; transform: scale(1.05); }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen pb-20">
+
+  <!-- 頂部導覽列 (Google 登入版) -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
+        <div>
+          <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
+          <p class="text-[11px] text-slate-400">Google 雲端帳號獨立隔離版</p>
+        </div>
+      </div>
+      
+      <!-- Google 登入區塊 -->
+      <div class="flex items-center gap-3">
+        <!-- AI Key 設定區 (使用者仍需輸入自己的 Gemini Key) -->
+        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+          <span class="text-[11px] font-bold text-slate-300 ml-2">✨ Gemini API Key：</span>
+          <input type="password" id="apiKeyInput" onchange="saveApiKey()" placeholder="輸入您的 AI 金鑰" class="bg-slate-900 text-white text-xs px-2 py-1.5 rounded border border-slate-600 w-32 outline-none focus:border-blue-400" />
+        </div>
+        
+        <div id="userInfo" class="hidden items-center gap-3 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+          <img id="userAvatar" class="w-6 h-6 rounded-full" src="" alt="avatar">
+          <span id="userName" class="text-xs font-bold text-slate-300"></span>
+          <button id="logoutBtn" class="text-[10px] bg-slate-700 hover:bg-rose-600 px-2 py-1 rounded transition">登出</button>
+        </div>
+        <button id="loginBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition shadow flex items-center gap-2">
+          <svg class="w-4 h-4 bg-white rounded-full p-0.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google 登入
+        </button>
+        <button id="syncBtn" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition shadow hidden items-center gap-1.5">
+          <span>☁️</span> 儲存進度
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 mt-8 space-y-8">
+    <!-- Step 1: 上傳與年月設定 -->
+    <section class="glass-card rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-blue-500">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full step-badge flex items-center justify-center text-sm">1</span> 設定年月與上傳資料
+        </h2>
+        <div class="flex gap-2">
+          <select id="yearSelect" onchange="onDateSelectChange()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-bold text-slate-700 bg-slate-50 outline-none"></select>
+          <select id="monthSelect" onchange="onDateSelectChange()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-bold text-slate-700 bg-slate-50 outline-none">
+            <option value="01">01 月</option><option value="02">02 月</option><option value="03">03 月</option>
+            <option value="04">04 月</option><option value="05">05 月</option><option value="06">06 月</option>
+            <option value="07">07 月</option><option value="08">08 月</option><option value="09" selected>09 月</option>
+            <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+          <span class="text-xs font-bold text-slate-700">📅 當月上班日／假日微調盤 (點擊徽章可切換狀態)</span>
+        </div>
+        <div id="workdayBadges" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-blue-400 transition">
+          <div class="flex justify-between items-center mb-1">
+            <div class="font-bold text-slate-700">① 上傳「當月工時紀錄 Excel」</div>
+            <span id="worklogStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold">無資料</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">系統會自動解析分頁，並檢核每日 8 小時</p>
+          <input type="file" id="worklogInput" accept=".xlsx,.xls" onchange="handleWorklogUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 cursor-pointer" />
+        </div>
+        <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-emerald-400 transition">
+          <div class="flex justify-between items-center mb-1">
+            <div class="font-bold text-slate-700">② 上傳「KPI 績效表範本 Excel」</div>
+            <span id="templateStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold">無範本</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">將以此檔案為基礎，自動將計算結果填入</p>
+          <input type="file" id="kpiTemplateInput" accept=".xlsx" onchange="handleKpiTemplateUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-100 file:text-emerald-700 cursor-pointer" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: 8小時防呆檢核與數據統計 -->
+    <section class="glass-card rounded-2xl p-6 border-t-4 border-t-amber-400">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center text-sm shadow-sm">2</span> 8小時防呆審閱 & 工時統計
+        </h2>
+        <span id="auditBadge" class="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full">等待上傳資料...</span>
+      </div>
+
+      <!-- 核心數據儀表板 -->
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        <div class="p-4 rounded-xl bg-white border border-slate-200 text-center shadow-sm">
+          <div class="text-[11px] text-slate-500 font-bold mb-1">標準基礎工時</div>
+          <div id="statBaseHours" class="text-xl font-black text-slate-800">0<span class="text-xs font-normal">h</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-blue-50 border border-blue-200 text-center shadow-sm">
+          <div class="text-[11px] text-blue-700 font-bold mb-1">+ 加班時數</div>
+          <div id="statOtHours" class="text-xl font-black text-blue-700">0<span class="text-xs font-normal">h</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center shadow-sm">
+          <div class="text-[11px] text-amber-700 font-bold mb-1">- 無效工時</div>
+          <div id="statInvalidHours" class="text-xl font-black text-amber-700">0<span class="text-xs font-normal">h</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-center shadow-sm">
+          <div class="text-[11px] text-rose-700 font-bold mb-1">- 休假時數</div>
+          <div id="statLeaveHours" class="text-xl font-black text-rose-700">0<span class="text-xs font-normal">h</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center shadow-md">
+          <div class="text-[11px] text-emerald-800 font-bold mb-1">= 實際有效工時</div>
+          <div id="statEffectiveHours" class="text-xl font-black text-emerald-700">0<span class="text-xs font-normal">h</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-800 border-2 border-slate-900 text-center shadow-md text-white flex flex-col justify-center">
+          <div class="text-[11px] text-slate-300 font-bold mb-1">J4達成 / H4給分</div>
+          <div class="text-lg font-black text-amber-400"><span id="statJ4Percent">0%</span> ➔ <span id="statH4Score" class="text-white text-xl">0</span></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 異常提示區 -->
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
+          <h3 class="text-xs font-extrabold text-rose-800 mb-2 flex justify-between">
+            <span>⚠️ 每日 8 小時未滿提示</span>
+            <label class="text-[10px] cursor-pointer bg-white px-2 py-0.5 rounded border border-rose-200"><input type="checkbox" id="filterUnder8" onchange="renderDailyTable()"> 只看異常</label>
+          </h3>
+          <ul id="anomalyList" class="text-[11px] text-rose-700 space-y-1 ml-4 list-disc font-medium max-h-32 overflow-y-auto pr-2">
+            <li class="text-slate-500 list-none -ml-4">無異常</li>
+          </ul>
+        </div>
+        <!-- 特殊標記清單 -->
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <h3 class="text-xs font-extrabold text-amber-900 mb-2">⚙️ 特殊時數微調 (休假/無效工時/排除)</h3>
+          <div id="specialItemsList" class="space-y-1.5 max-h-32 overflow-y-auto pr-2"></div>
+        </div>
+      </div>
+      
+      <div class="mt-4 overflow-x-auto border border-slate-200 rounded-lg max-h-60">
+        <table class="w-full text-left border-collapse text-[11px]">
+          <thead class="bg-slate-50 text-slate-500 sticky top-0 border-b border-slate-200 shadow-sm z-10">
+            <tr>
+              <th class="py-2 px-3 font-bold">日期</th><th class="py-2 px-2 text-center">有效</th><th class="py-2 px-2 text-center">加班</th><th class="py-2 px-2 text-center">無效</th><th class="py-2 px-2 text-center">休假</th><th class="py-2 px-2 text-center">排除</th><th class="py-2 px-2 text-center bg-slate-100 font-bold">總計</th><th class="py-2 px-3">摘要</th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- Step 3: KPI 報表生成 -->
+    <section class="glass-card rounded-2xl p-6 border-t-4 border-t-emerald-500">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-sm shadow-sm">3</span> KPI 內容審閱與匯出
+        </h2>
+        <div class="flex items-center gap-3">
+          <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
+          <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
+          <button onclick="generateAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
+            ✨ AI 一鍵生成草稿
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 左側：專案排行統計 -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col">
+          <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月專案工時排行 (前十名)</h3>
+          <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto"></div>
+        </div>
+
+        <!-- 右側：報表填寫區 -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="border border-orange-200 bg-orange-50/50 rounded-xl p-3">
+              <label class="block text-[11px] font-bold text-orange-900 mb-2">📌 J4 公式 (財務構面)</label>
+              <textarea id="cellJ4Input" rows="3" class="w-full text-[11px] p-2 rounded border border-orange-200 outline-none bg-white"></textarea>
+            </div>
+            <div class="border border-orange-200 bg-orange-50/50 rounded-xl p-3">
+              <label class="block text-[11px] font-bold text-orange-900 mb-2">🎓 J14 內外訓 (學習構面)</label>
+              <textarea id="cellJ14Input" rows="3" class="w-full text-[11px] p-2 rounded border border-orange-200 outline-none bg-white"></textarea>
+            </div>
+          </div>
+
+          <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J6 專案執行效益</label>
+            <textarea id="cellJ6Input" onchange="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+          </div>
+          <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J10 客戶 / 主管滿意度</label>
+            <textarea id="cellJ10Input" onchange="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+          </div>
+          <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
+            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J11 團隊滿意度</label>
+            <textarea id="cellJ11Input" onchange="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+          </div>
+          <input type="hidden" id="cellH4Input">
+          <input type="hidden" id="cellH14Input">
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end border-t border-slate-100 pt-5">
+        <button id="exportKpiBtn" onclick="exportFilledKpiWorkbook()" class="px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-md flex items-center gap-2 transition disabled:bg-slate-400">
+          <span class="text-lg">📥</span> 產出並下載 KPI Excel 報表
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Firebase 模組化 SDK (v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    // 🔑 這是從截圖為您提取的 Firebase 設定金鑰
+    const firebaseConfig = {
+      apiKey: "AIzaSyCyQxQSBWwu99hl9M_-Iclxd5kTf0pQoEI",
+      authDomain: "chainsea-kpi.firebaseapp.com",
+      projectId: "chainsea-kpi",
+      storageBucket: "chainsea-kpi.firebasestorage.app",
+      messagingSenderId: "162512702783",
+      appId: "1:162512702783:web:dbbcefa7627b86ab3dd78a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    // 登入邏輯
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      signInWithPopup(auth, provider).catch(error => alert("登入失敗: " + error.message));
+    });
+
+    // 登出邏輯
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      signOut(auth).then(() => { alert("已登出"); location.reload(); });
+    });
+
+    // 監聽登入狀態
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('loginBtn').classList.add('hidden');
+        document.getElementById('userInfo').classList.remove('hidden');
+        document.getElementById('userInfo').classList.add('flex');
+        document.getElementById('syncBtn').classList.remove('hidden');
+        document.getElementById('syncBtn').classList.add('flex');
+        document.getElementById('userName').textContent = user.displayName;
+        document.getElementById('userAvatar').src = user.photoURL;
+        
+        // 自動抓取使用者的雲端資料
+        await loadFromCloud();
+      } else {
+        currentUser = null;
+        document.getElementById('loginBtn').classList.remove('hidden');
+        document.getElementById('userInfo').classList.add('hidden');
+        document.getElementById('userInfo').classList.remove('flex');
+        document.getElementById('syncBtn').classList.add('hidden');
+        document.getElementById('syncBtn').classList.remove('flex');
+      }
+    });
+
+    // 儲存至雲端
+    document.getElementById('syncBtn').addEventListener('click', async () => {
+      if (!currentUser) return alert("請先登入 Google 帳號！");
+      const btn = document.getElementById('syncBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span>⏳ 儲存中...</span>`;
+      btn.disabled = true;
+
+      try {
+        const payload = {
+          worklogData: window.parsedSheetsData || [],
+          worklogYm: document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value,
+          draftJ6: document.getElementById('cellJ6Input').value,
+          draftJ10: document.getElementById('cellJ10Input').value,
+          draftJ11: document.getElementById('cellJ11Input').value,
+          timestamp: Date.now()
+        };
+        await setDoc(doc(db, "kpi_users", currentUser.uid), payload);
+        alert("☁️ 已成功儲存至個人雲端！");
+      } catch (e) {
+        alert("儲存失敗：" + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    // 從雲端載入
+    async function loadFromCloud() {
+      if (!currentUser) return;
+      try {
+        const docSnap = await getDoc(doc(db, "kpi_users", currentUser.uid));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          window.parsedSheetsData = data.worklogData || [];
+          if (data.worklogYm) {
+            const [y, m] = data.worklogYm.split("-");
+            document.getElementById("yearSelect").value = y;
+            document.getElementById("monthSelect").value = m;
+          }
+          if (data.draftJ6) document.getElementById('cellJ6Input').value = data.draftJ6;
+          if (data.draftJ10) document.getElementById('cellJ10Input').value = data.draftJ10;
+          if (data.draftJ11) document.getElementById('cellJ11Input').value = data.draftJ11;
+          
+          if (window.parsedSheetsData.length > 0) {
+            document.getElementById("worklogStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold";
+            document.getElementById("worklogStatusBadge").textContent = "☁️ 雲端讀取成功";
+          }
+          
+          window.onDateSelectChange();
+          if (window.recalculateAndRenderAll) window.recalculateAndRenderAll();
+        }
+      } catch (e) { console.error("雲端讀取失敗", e); }
+    }
+  </script>
+
+  <!-- 業務邏輯腳本 -->
+  <script>
+    window.parsedSheetsData = []; 
+    let kpiTemplateArrayBuffer = null;
+    const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
+
+    window.onload = function() {
+      initYearSelect();
+      const apiKey = localStorage.getItem('kpi_gemini_key');
+      if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+      onDateSelectChange();
+    };
+
+    function saveApiKey() {
+      localStorage.setItem('kpi_gemini_key', document.getElementById('apiKeyInput').value.trim());
+    }
+
+    function initYearSelect() {
+      const yearSelect = document.getElementById("yearSelect");
+      const currentYear = new Date().getFullYear();
+      let html = "";
+      for (let y = 2025; y <= 2035; y++) {
+        html += `<option value="${y}" ${y === currentYear ? "selected" : ""}>${y} 年 (民國${y - 1911}年)</option>`;
+      }
+      yearSelect.innerHTML = html;
+      document.getElementById("monthSelect").value = String(new Date().getMonth() + 1).padStart(2, '0');
+      updateSheetNamePreview();
+    }
+
+    function updateSheetNamePreview() {
+      const year = document.getElementById("yearSelect").value;
+      const month = document.getElementById("monthSelect").value;
+      document.getElementById("newSheetNameInput").value = `${parseInt(year, 10) - 1911}年${month}月KPI`;
+    }
+
+    async function fetchTaiwanCalendar(year) {
+      const cacheKey = `dgpa_cache_${year}`;
+      if (localStorage.getItem(cacheKey)) return true;
+      try {
+        const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
+        if (!res.ok) return false;
+        const data = await res.json();
+        const overridesByMonth = {};
+        data.forEach(d => {
+          const m = d.date.substring(4, 6);
+          const mmdd = m + d.date.substring(6, 8);
+          if (!overridesByMonth[m]) overridesByMonth[m] = {};
+          overridesByMonth[m][mmdd] = d.isHoliday ? "holiday" : "workday";
+        });
+        for (const [m, overrides] of Object.entries(overridesByMonth)) {
+          if (!localStorage.getItem(`kpi_holidays_${year}_${m}`)) localStorage.setItem(`kpi_holidays_${year}_${m}`, JSON.stringify(overrides));
+        }
+        localStorage.setItem(cacheKey, "true");
+        return true;
+      } catch (e) { return false; }
+    }
+
+    function getDaysInMonthInfo(year, monthStr) {
+      const y = parseInt(year, 10), m = parseInt(monthStr, 10);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const overrides = JSON.parse(localStorage.getItem(`kpi_holidays_${y}_${monthStr}`) || "{}");
+      const days = [];
+      let totalWorkdays = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(y, m - 1, d);
+        const dow = dateObj.getDay();
+        const mmdd = String(monthStr).padStart(2, '0') + String(d).padStart(2, '0');
+        let isWorkday = (dow !== 0 && dow !== 6);
+        if (overrides[mmdd] === "holiday") isWorkday = false;
+        if (overrides[mmdd] === "workday") isWorkday = true;
+        if (isWorkday) totalWorkdays++;
+        days.push({ mmdd, day: d, dowName: WEEKDAY_NAMES[dow], isWorkday });
+      }
+      return { days, totalWorkdays };
+    }
+
+    window.onDateSelectChange = async function() {
+      const year = document.getElementById("yearSelect").value;
+      document.getElementById("calendarSyncStatus").textContent = "同步中...";
+      await fetchTaiwanCalendar(year);
+      document.getElementById("calendarSyncStatus").textContent = "✔ 日曆已同步";
+      updateSheetNamePreview();
+      renderWorkdayBadges();
+      recalculateAndRenderAll();
+    }
+
+    window.toggleDayStatus = function(mmdd, currentIsWorkday) {
+      const year = document.getElementById("yearSelect").value;
+      const month = document.getElementById("monthSelect").value;
+      const key = `kpi_holidays_${year}_${month}`;
+      const overrides = JSON.parse(localStorage.getItem(key) || "{}");
+      overrides[mmdd] = currentIsWorkday ? "holiday" : "workday";
+      localStorage.setItem(key, JSON.stringify(overrides));
+      renderWorkdayBadges();
+      recalculateAndRenderAll();
+    }
+
+    function renderWorkdayBadges() {
+      const year = document.getElementById("yearSelect").value;
+      const month = document.getElementById("monthSelect").value;
+      const { days } = getDaysInMonthInfo(year, month);
+      const uploadedSet = new Set(window.parsedSheetsData.map(s => s.sheetName));
+      document.getElementById("workdayBadges").innerHTML = days.map(d => {
+        let cls = "", icon = "";
+        if (d.isWorkday) {
+          if (window.parsedSheetsData.length > 0 && !uploadedSet.has(d.mmdd)) { cls = "badge-workday badge-missing"; icon = "⚠️缺 "; }
+          else { cls = "badge-workday"; }
+        } else { cls = "badge-holiday"; }
+        return `<button onclick="toggleDayStatus('${d.mmdd}',${d.isWorkday})" class="text-[11px] px-2 py-1 rounded border shadow-sm ${cls}">${icon}${d.day}(${d.dowName})</button>`;
+      }).join("");
+    }
+
+    function classifyRowDefaultMode(task, validFlag) {
+      const t = (task || "").trim();
+      const vf = (validFlag || "").trim();
+      if (t.includes("請假") || t.includes("休假") || t.includes("特休") || t.includes("病假") || t.includes("事假")) return "leave";
+      if (vf.includes("不列入")) return "exclude";
+      if (vf === "無" || vf.includes("無效")) return "invalid";
+      if (t.includes("加班") || t.startsWith("報加班")) return "ot";
+      return "valid";
+    }
+
+    window.handleWorklogUpload = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellDates: true });
+        const sheets = [];
+        let rowIdCounter = 1;
+        workbook.SheetNames.forEach(sheetName => {
+          const ws = workbook.Sheets[sheetName];
+          const rowsAoA = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
+          if (!rowsAoA || rowsAoA.length === 0) return;
+          const items = [];
+          for (let r = 1; r < rowsAoA.length; r++) {
+            const row = rowsAoA[r];
+            if (!row) continue;
+            const task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
+            const hours = row[2] !== undefined && row[2] !== null && row[2] !== "" ? parseFloat(row[2]) : 0;
+            const validFlag = row[4] !== undefined && row[4] !== null ? String(row[4]).trim() : "";
+            if ((hours && !isNaN(hours) && hours > 0) || validFlag !== "") {
+              items.push({ id: rowIdCounter++, sheetName: sheetName.trim(), task, hours: isNaN(hours) ? 0 : hours, validFlag, mode: classifyRowDefaultMode(task, validFlag) });
+            }
+          }
+          sheets.push({ sheetName: sheetName.trim(), rows: items });
+        });
+        window.parsedSheetsData = sheets;
+        document.getElementById("worklogStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold";
+        document.getElementById("worklogStatusBadge").textContent = "✅ 已解析";
+        renderWorkdayBadges();
+        recalculateAndRenderAll();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    window.changeSpecialItemMode = function(rowId, newMode) {
+      window.parsedSheetsData.forEach(s => s.rows.forEach(r => { if (r.id === rowId) r.mode = newMode; }));
+      recalculateAndRenderAll();
+    }
+
+    window.recalculateAndRenderAll = function() {
+      const year = document.getElementById("yearSelect").value;
+      const month = document.getElementById("monthSelect").value;
+      const { days, totalWorkdays } = getDaysInMonthInfo(year, month);
+      
+      const stdBaseHours = totalWorkdays * 8;
+      const targetHours = +(stdBaseHours * 0.8).toFixed(2);
+
+      document.getElementById("statBaseHours").innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
+      if (window.parsedSheetsData.length === 0) return;
+
+      let totalOt = 0, totalInvalid = 0, totalLeave = 0, totalExcluded = 0;
+      window.parsedSheetsData.forEach(s => {
+        s.rows.forEach(r => {
+          if (r.mode === "ot") totalOt += r.hours;
+          else if (r.mode === "invalid") totalInvalid += r.hours;
+          else if (r.mode === "leave") totalLeave += r.hours;
+          else if (r.mode === "exclude") totalExcluded += r.hours;
+        });
+      });
+
+      const effectiveHours = stdBaseHours + totalOt - totalInvalid - totalLeave;
+      const j4Percent = targetHours > 0 ? (effectiveHours / targetHours) * 100 : 0;
+      const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
+
+      document.getElementById("statOtHours").innerHTML = `${totalOt}<span class="text-xs font-normal">h</span>`;
+      document.getElementById("statInvalidHours").innerHTML = `${totalInvalid}<span class="text-xs font-normal">h</span>`;
+      document.getElementById("statLeaveHours").innerHTML = `${totalLeave}<span class="text-xs font-normal">h</span>`;
+      document.getElementById("statEffectiveHours").innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
+      document.getElementById("statJ4Percent").textContent = `${j4Percent.toFixed(1)}%`;
+      document.getElementById("statH4Score").textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
+
+      document.getElementById("cellH4Input").value = h4Score === 120 ? 120 : Math.round(j4Percent);
+      const j4FormulaParts = `${totalWorkdays}x8` + (totalOt > 0 ? `+${totalOt}` : "") + (totalInvalid > 0 ? `-${totalInvalid}` : "") + (totalLeave > 0 ? `-${totalLeave}` : "");
+      document.getElementById("cellJ4Input").value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${totalWorkdays} x 8 x 0.8=${targetHours})) * 100\% =${j4Percent.toFixed(2)}%`;
+
+      updateJ14TrainingBox();
+      renderAnomaliesAndSpecialList(days);
+      renderDailyTable();
+      renderProjectRanking();
+    }
+
+    function updateJ14TrainingBox() {
+      const trainingRows = [];
+      window.parsedSheetsData.forEach(s => {
+        s.rows.forEach(r => {
+          if (r.task.includes("訓練") || r.task.includes("課程") || r.task.includes("講座") || r.mode === "exclude") {
+            trainingRows.push({ sheetName: s.sheetName, task: r.task, hours: r.hours });
+          }
+        });
+      });
+      const totalTrainHours = trainingRows.reduce((acc, cur) => acc + cur.hours, 0);
+      const trainScore = Math.round((totalTrainHours / 4) * 100);
+      document.getElementById("cellH14Input").value = totalTrainHours >= 4 ? 100 : trainScore;
+      const lines = trainingRows.map(tr => `${parseInt(tr.sheetName.slice(0, 2), 10)}/${tr.sheetName.slice(2, 4)}完成${tr.hours}hrs-${tr.task}`);
+      document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
+    }
+
+    function renderAnomaliesAndSpecialList(monthDays) {
+      const anomalies = [];
+      const uploadedMap = new Map(window.parsedSheetsData.map(s => [s.sheetName, s]));
+      monthDays.forEach(w => {
+        if (w.isWorkday && !uploadedMap.has(w.mmdd)) anomalies.push({ title: `[${w.mmdd}] 缺少上班日分頁` });
+      });
+
+      const specialItems = [];
+      window.parsedSheetsData.forEach(s => {
+        let dayCountedTotal = 0;
+        s.rows.forEach(r => {
+          if (r.mode !== "exclude") dayCountedTotal += r.hours;
+          if (r.validFlag !== "" || r.mode !== "valid") specialItems.push({ sheetName: s.sheetName, ...r });
+        });
+        if (dayCountedTotal < 8) anomalies.push({ title: `[${s.sheetName}] 總時數僅 ${dayCountedTotal}h (未滿 8h)` });
+      });
+
+      const auditBadge = document.getElementById("auditBadge");
+      if (anomalies.length > 0) {
+        auditBadge.className = "px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full animate-pulse";
+        auditBadge.textContent = `🚨 發現 ${anomalies.length} 項異常`;
+        document.getElementById("anomalyList").innerHTML = anomalies.map(a => `<li>${a.title}</li>`).join("");
+      } else {
+        auditBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full";
+        auditBadge.textContent = `✅ 時數檢核通過`;
+        document.getElementById("anomalyList").innerHTML = `<li class="text-slate-500 list-none -ml-4">完美！無異常</li>`;
+      }
+
+      document.getElementById("specialItemsList").innerHTML = specialItems.length === 0 ? `<div class="text-slate-400 text-[11px] py-2">無特殊標記項目</div>` : specialItems.map(item => `<div class="bg-white border border-amber-200 rounded p-2 flex justify-between items-center text-[10px]"><div class="font-bold truncate w-24" title="${item.task}">[${item.sheetName}]${item.task}</div><select onchange="changeSpecialItemMode(${item.id}, this.value)" class="border rounded bg-slate-50 px-1 py-0.5"><option value="invalid" ${item.mode === "invalid" ? "selected" : ""}>無效</option><option value="leave" ${item.mode === "leave" ? "selected" : ""}>請假</option><option value="exclude" ${item.mode === "exclude" ? "selected" : ""}>排除</option><option value="valid" ${item.mode === "valid" ? "selected" : ""}>有效</option><option value="ot" ${item.mode === "ot" ? "selected" : ""}>加班</option></select></div>`).join("");
+    }
+
+    window.renderDailyTable = function() {
+      const tbody = document.getElementById("dailyTableBody");
+      const filterOnlyAnomaly = document.getElementById("filterUnder8Only").checked;
+      if (window.parsedSheetsData.length === 0) { tbody.innerHTML = ``; return; }
+
+      const rowsHtml = [];
+      window.parsedSheetsData.forEach(s => {
+        let validH = 0, otH = 0, invalidH = 0, leaveH = 0, excludeH = 0;
+        const taskSummaries = [];
+        s.rows.forEach(r => {
+          if (r.mode === "valid") validH += r.hours;
+          else if (r.mode === "ot") otH += r.hours;
+          else if (r.mode === "invalid") invalidH += r.hours;
+          else if (r.mode === "leave") leaveH += r.hours;
+          else if (r.mode === "exclude") excludeH += r.hours;
+          taskSummaries.push(`${r.task}`);
+        });
+
+        const countedTotal = validH + otH + invalidH + leaveH;
+        const isUnder8 = countedTotal < 8;
+        if (filterOnlyAnomaly && !isUnder8 && excludeH === 0) return;
+
+        rowsHtml.push(`<tr class="${isUnder8 ? "bg-rose-50" : ""} border-b border-slate-100"><td class="py-2 px-3 font-bold text-slate-700">${s.sheetName}</td><td class="py-2 px-2 text-center">${validH}</td><td class="py-2 px-2 text-center text-blue-600">${otH}</td><td class="py-2 px-2 text-center text-amber-600">${invalidH}</td><td class="py-2 px-2 text-center text-rose-600">${leaveH}</td><td class="py-2 px-2 text-center text-slate-400">${excludeH}</td><td class="py-2 px-2 text-center font-bold bg-slate-100">${countedTotal}h</td><td class="py-2 px-3 truncate max-w-[150px]" title="${taskSummaries.join("、")}">${taskSummaries.join("、")}</td></tr>`);
+      });
+      tbody.innerHTML = rowsHtml.join("");
+    }
+
+    function renderProjectRanking() {
+      const map = new Map();
+      window.parsedSheetsData.forEach(s => s.rows.forEach(r => {
+        if (r.mode === "valid" || r.mode === "ot") {
+          let name = r.task.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+          map.set(name, (map.get(name) || 0) + r.hours);
+        }
+      }));
+      const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      document.getElementById("projectRankList").innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
+    }
+
+    window.autoSaveText = function() {} // Firebase 版本透過 syncBtn 儲存
+
+    window.generateAiDraft = async function() {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      if (!apiKey) return alert("請在右上角輸入您的 Gemini API Key！");
+      if (window.parsedSheetsData.length === 0) return alert("請先上傳工時紀錄！");
+
+      const projectMap = new Map();
+      window.parsedSheetsData.forEach(s => s.rows.forEach(r => {
+        if (r.mode === "valid" || r.mode === "ot") {
+          let name = r.task.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+          projectMap.set(name, (projectMap.get(name) || 0) + r.hours);
+        }
+      }));
+      const projectSummary = Array.from(projectMap.entries()).map(([k, v]) => `- ${k}: ${v}小時`).join("\n");
+      const prompt = `你是一個專業的 UI/UX 與平面設計師，正在撰寫每月 KPI 績效報告。以下是我這個月的專案與工時明細：\n${projectSummary}\n\n請幫我生成以下三個欄位的內容，必須符合繁體中文職場正式用語，並精準對應：\n1. J6 (專案執行效益)：挑選前 3 大高工時專案，具體描述交付成果與量化效益（分 3 點，每點以換行區隔，開頭不要有數字編號）。\n2. J10 (客戶/主管滿意度)：以向上管理、急件交付、修改配合度思考，舉例 3 項具體案例（分 3 點）。\n3. J11 (團隊滿意度)：以跨部門協作、會議、內訓與紀律思考，舉例 3 項具體案例（分 3 點）。\n\n請嚴格回傳 JSON 格式：{"j6": "...", "j10": "...", "j11": "..."}`;
+
+      const btn = event.currentTarget;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `⏳ 思考中...`; btn.disabled = true;
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        let rawText = data.candidates[0].content.parts[0].text.trim().replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+        const resJson = JSON.parse(rawText);
+        document.getElementById('cellJ6Input').value = resJson.j6 || "";
+        document.getElementById('cellJ10Input').value = resJson.j10 || "";
+        document.getElementById('cellJ11Input').value = resJson.j11 || "";
+        alert("✨ AI 草稿生成完畢！");
+      } catch (err) { alert("AI 生成失敗：" + err.message); } finally { btn.innerHTML = originalText; btn.disabled = false; }
+    }
+
+    window.handleKpiTemplateUpload = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        kpiTemplateArrayBuffer = e.target.result;
+        document.getElementById("templateStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold";
+        document.getElementById("templateStatusBadge").textContent = "✅ 已就緒";
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    window.exportFilledKpiWorkbook = async function() {
+      if (!kpiTemplateArrayBuffer) return alert("請先上傳 KPI 範本 Excel！");
+      try {
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(kpiTemplateArrayBuffer);
+        const sourceSheet = workbook.worksheets[workbook.worksheets.length - 1];
+        const newSheetName = document.getElementById("newSheetNameInput").value.trim();
+        const isCrossYear = document.getElementById("crossYearReset").checked;
+
+        if (isCrossYear) while (workbook.worksheets.length > 1) workbook.removeWorksheet(workbook.worksheets[0].id);
+
+        let targetSheet = workbook.getWorksheet(newSheetName);
+        if (!targetSheet) {
+          targetSheet = workbook.addWorksheet(newSheetName);
+          if (sourceSheet.columns) targetSheet.columns = sourceSheet.columns.map(c => ({ width: c.width, style: c.style }));
+          sourceSheet.eachRow({ includeEmpty: true }, (row, rNum) => {
+            const newRow = targetSheet.getRow(rNum);
+            newRow.height = row.height;
+            row.eachCell({ includeEmpty: true }, (cell, cNum) => {
+              const newCell = newRow.getCell(cNum);
+              newCell.value = cell.value;
+              newCell.style = JSON.parse(JSON.stringify(cell.style || {}));
+            });
+          });
+          if (sourceSheet.model && sourceSheet.model.merges) sourceSheet.model.merges.forEach(m => { try { targetSheet.mergeCells(m); } catch (e) {} });
+        }
+
+        if (isCrossYear) {
+          const a1Val = String(targetSheet.getCell("A1").value || "");
+          const rocYear = parseInt(document.getElementById("yearSelect").value, 10) - 1911;
+          targetSheet.getCell("A1").value = a1Val.replace(/\d+年度/, `${rocYear}年度`);
+        }
+
+        targetSheet.getCell("H4").value = Number(document.getElementById("cellH4Input").value) || 120;
+        targetSheet.getCell("J4").value = document.getElementById("cellJ4Input").value;
+        targetSheet.getCell("J6").value = document.getElementById("cellJ6Input").value;
+        targetSheet.getCell("J10").value = document.getElementById("cellJ10Input").value;
+        targetSheet.getCell("J11").value = document.getElementById("cellJ11Input").value;
+        targetSheet.getCell("H14").value = Number(document.getElementById("cellH14Input").value) || 100;
+        targetSheet.getCell("J14").value = document.getElementById("cellJ14Input").value;
+
+        if (isCrossYear && workbook.worksheets.length > 1) {
+           const oldId = workbook.worksheets[0].id;
+           if (workbook.worksheets[0].name !== newSheetName) workbook.removeWorksheet(oldId);
+        }
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `KPI報表_已填寫_${newSheetName}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) { alert("匯出發生錯誤：" + err.message); }
+    }
+  </script>
+</body>
+</html>
