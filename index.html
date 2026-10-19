@@ -34,7 +34,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v8.0 (數據驅動版)</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v8.1 (全任務總覽版)</p>
         </div>
       </div>
       
@@ -171,8 +171,8 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col">
-          <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月專案工時排行 (前十名)</h3>
-          <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto"></div>
+          <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月所有專案與任務工時總覽</h3>
+          <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto pr-2"></div>
         </div>
 
         <div class="lg:col-span-2 space-y-4">
@@ -371,7 +371,10 @@
     }
 
     async function fetchTaiwanCalendar(year) {
-      const cacheKey = `dgpa_cache_${year}`; if (localStorage.getItem(cacheKey)) return true; try { const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
+      const cacheKey = `dgpa_cache_${year}`;
+      if (localStorage.getItem(cacheKey)) return true;
+      try {
+        const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
         if (!res.ok) return false;
         const data = await res.json();
         const overridesByMonth = {};
@@ -577,6 +580,7 @@
         const computedDays = [];
         let totalValid = 0, totalOt = 0, totalInvalid = 0, totalLeave = 0;
         const projectMap = new Map();
+        const allTasksMap = new Map(); // 🌟 用來呈現在左側排行總表的所有任務
 
         daysInfo.days.forEach(d => {
             let tasks = [];
@@ -596,8 +600,12 @@
                 else if (t.mode === 'leave') leave += h;
                 else if (t.mode === 'exclude') exclude += h;
 
+                // 總表：所有任務不分有效無效都收集
+                let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
+                allTasksMap.set(name, (allTasksMap.get(name) || 0) + h);
+
+                // AI用表：只收集有效跟加班工時
                 if (t.mode === 'valid' || t.mode === 'ot') {
-                    let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
                     projectMap.set(name, (projectMap.get(name) || 0) + h);
                 }
             });
@@ -613,7 +621,7 @@
             });
         });
 
-        return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap };
+        return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap, allTasksMap };
     }
 
     window.recalculateAndRenderAll = function() {
@@ -653,7 +661,8 @@
 
         updateJ14TrainingBox(data.computedDays);
         renderDailyTable(data.computedDays);
-        renderProjectRanking(data.projectMap);
+        // 🌟 改為使用包含所有任務的 allTasksMap 渲染總表
+        renderProjectRanking(data.allTasksMap);
         renderWorkdayBadges();
     }
 
@@ -749,8 +758,9 @@
         }
     }
 
-    function renderProjectRanking(projectMap) {
-        const sorted = Array.from(projectMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    // 🌟 不限制前十名，直接印出所有任務
+    function renderProjectRanking(allTasksMap) {
+        const sorted = Array.from(allTasksMap.entries()).sort((a, b) => b[1] - a[1]);
         const rankListEl = document.getElementById("projectRankList");
         if(sorted.length === 0) {
             rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
