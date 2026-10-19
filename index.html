@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (本地智慧造句版)</title>
+  <title>每月工時 & KPI 自動填表系統 (雙引擎備援版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -18,6 +18,12 @@
     .badge-workday:hover { background-color: #d1fae5; transform: scale(1.05); }
     .badge-holiday { background-color: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: pointer; text-decoration: line-through; transition: all 0.2s;}
     .badge-holiday:hover { background-color: #e2e8f0; color: #64748b; transform: scale(1.05); }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .editable-input { background: rgba(255,255,255,0.5); border: 1px solid transparent; transition: all 0.2s; border-radius: 4px; padding: 2px 4px; }
+    .editable-input:hover { border-color: #cbd5e1; background: #fff; }
+    .editable-input:focus { border-color: #3b82f6; background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+    .row-under { background-color: #fff1f2; }
+    .row-over { background-color: #f0fdf4; }
   </style>
 </head>
 <body class="text-slate-800 antialiased min-h-screen pb-20">
@@ -28,7 +34,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v5.1 (本地智慧造句版)</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v6.0 (雙引擎備援版)</p>
         </div>
       </div>
       
@@ -79,7 +85,7 @@
             <div class="font-bold text-slate-700">① 上傳「當月工時紀錄 Excel」</div>
             <span id="worklogStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold max-w-[180px] truncate">無資料</span>
           </div>
-          <p class="text-xs text-slate-500 mb-4">系統會自動解析分頁，並檢核每日 8 小時</p>
+          <p class="text-xs text-slate-500 mb-4">系統會自動解析，您可於下方表格直接修改漏填時數</p>
           <input type="file" id="worklogInput" accept=".xlsx,.xls" onchange="handleWorklogUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 cursor-pointer" />
         </div>
         <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-emerald-400 transition">
@@ -128,31 +134,29 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
-          <h3 class="text-xs font-extrabold text-rose-800 mb-2 flex justify-between">
-            <span>⚠️ 每日 8 小時未滿提示</span>
-            <label class="text-[10px] cursor-pointer bg-white px-2 py-0.5 rounded border border-rose-200"><input type="checkbox" id="filterUnder8Only" onchange="renderDailyTable()"> 只看異常</label>
-          </h3>
-          <ul id="anomalyList" class="text-[11px] text-rose-700 space-y-1 ml-4 list-disc font-medium max-h-32 overflow-y-auto pr-2">
-            <li class="text-slate-500 list-none -ml-4">無異常</li>
-          </ul>
+      <!-- 萬能日曆明細表 (可直接編輯) -->
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-extrabold text-slate-700">📝 當月每日工時明細 <span class="text-slate-400 font-normal ml-2">點擊表格內數字或文字即可手動修正漏填</span></h3>
+            <label class="text-[10px] cursor-pointer bg-white px-2 py-0.5 rounded border border-slate-300 hover:bg-slate-100"><input type="checkbox" id="filterUnder8Only" onchange="window.recalculateAndRenderAll()"> 只看異常日期</label>
         </div>
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <h3 class="text-xs font-extrabold text-amber-900 mb-2">⚙️ 特殊時數微調 (休假/無效工時/排除)</h3>
-          <div id="specialItemsList" class="space-y-1.5 max-h-32 overflow-y-auto pr-2"></div>
+        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-64 shadow-inner bg-white">
+          <table class="w-full text-left border-collapse text-[11px]">
+            <thead class="bg-slate-100 text-slate-600 sticky top-0 border-b border-slate-200 z-10 shadow-sm">
+              <tr>
+                <th class="py-2 px-3 font-bold w-20">日期</th>
+                <th class="py-2 px-1 text-center w-12">有效</th>
+                <th class="py-2 px-1 text-center w-12">加班</th>
+                <th class="py-2 px-1 text-center w-12">無效</th>
+                <th class="py-2 px-1 text-center w-12">休假</th>
+                <th class="py-2 px-1 text-center w-12">排除</th>
+                <th class="py-2 px-2 text-center font-bold w-12">總計</th>
+                <th class="py-2 px-3">專案 / 任務摘要</th>
+              </tr>
+            </thead>
+            <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
-      </div>
-      
-      <div class="mt-4 overflow-x-auto border border-slate-200 rounded-lg max-h-60">
-        <table class="w-full text-left border-collapse text-[11px]">
-          <thead class="bg-slate-50 text-slate-500 sticky top-0 border-b border-slate-200 shadow-sm z-10">
-            <tr>
-              <th class="py-2 px-3 font-bold">日期</th><th class="py-2 px-2 text-center">有效</th><th class="py-2 px-2 text-center">加班</th><th class="py-2 px-2 text-center">無效</th><th class="py-2 px-2 text-center">休假</th><th class="py-2 px-2 text-center">排除</th><th class="py-2 px-2 text-center bg-slate-100 font-bold">總計</th><th class="py-2 px-3">摘要</th>
-            </tr>
-          </thead>
-          <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
-        </table>
       </div>
     </section>
 
@@ -164,8 +168,8 @@
         <div class="flex items-center gap-3">
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
-          <button id="aiDraftBtn" onclick="generateAllDrafts(false)" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
-            ⚡ 全部重新產生草稿
+          <button onclick="generateAllDrafts()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
+            ✨ AI 重新產生全部
           </button>
         </div>
       </div>
@@ -190,24 +194,30 @@
 
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <div class="flex justify-between items-center mb-1">
-                <label class="block text-[11px] font-extrabold text-slate-700">📌 J6 專案執行效益</label>
-                <button type="button" onclick="regenerateJ6()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+                <label class="text-[11px] font-extrabold text-slate-700 flex items-center">
+                    📌 J6 專案執行效益 <span id="j6Source"></span>
+                </label>
+                <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行前三名專案填入..."></textarea>
+            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行專案填入..."></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <div class="flex justify-between items-center mb-1">
-                <label class="block text-[11px] font-extrabold text-slate-700">📌 J10 客戶 / 主管滿意度</label>
-                <button type="button" onclick="regenerateJ10()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+                <label class="text-[11px] font-extrabold text-slate-700 flex items-center">
+                    📌 J10 客戶 / 主管滿意度 <span id="j10Source"></span>
+                </label>
+                <button type="button" onclick="regenerateSingle('j10')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
             <textarea id="cellJ10Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <div class="flex justify-between items-center mb-1">
-                <label class="block text-[11px] font-extrabold text-slate-700">📌 J11 團隊滿意度</label>
-                <button type="button" onclick="regenerateJ11()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+                <label class="text-[11px] font-extrabold text-slate-700 flex items-center">
+                    📌 J11 團隊滿意度 <span id="j11Source"></span>
+                </label>
+                <button type="button" onclick="regenerateSingle('j11')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
             <textarea id="cellJ11Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
@@ -242,6 +252,10 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
+
+    window.firebaseDB = db;
+    window.firebaseGetDoc = getDoc;
+    window.firebaseDoc = doc;
 
     let currentUser = null;
 
@@ -290,6 +304,7 @@
         window.cloudData.monthly[ym] = {
             worklogData: window.parsedSheetsData || [],
             worklogFileName: window.worklogFileName || "",
+            manualOverrides: window.manualOverrides || {},
             draftJ6: document.getElementById('cellJ6Input').value,
             draftJ10: document.getElementById('cellJ10Input').value,
             draftJ11: document.getElementById('cellJ11Input').value
@@ -301,7 +316,7 @@
 
         const payload = { cloudData: window.cloudData, timestamp: Date.now() };
         await setDoc(doc(db, "kpi_users", currentUser.uid), payload);
-        alert("☁️ 此月份的進度已成功備份至雲端！");
+        alert("☁️ 此月份進度（包含手動修改工時）已成功備份至雲端！");
       } catch (e) {
         alert("儲存失敗：" + e.message);
       } finally {
@@ -334,6 +349,7 @@
 
   <script>
     window.parsedSheetsData = []; 
+    window.manualOverrides = {};
     window.worklogFileName = "";
     window.kpiTemplateFileName = "";
     window.kpiTemplateBase64 = "";
@@ -342,14 +358,12 @@
     const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 
     window.arrayBufferToBase64 = function(buffer) {
-        let binary = '';
-        let bytes = new Uint8Array(buffer);
+        let binary = ''; let bytes = new Uint8Array(buffer);
         for (let i = 0; i < bytes.byteLength; i++) { binary += String.fromCharCode(bytes[i]); }
         return window.btoa(binary);
     }
     window.base64ToArrayBuffer = function(base64) {
-        let binary_string = window.atob(base64);
-        let bytes = new Uint8Array(binary_string.length);
+        let binary_string = window.atob(base64); let bytes = new Uint8Array(binary_string.length);
         for (let i = 0; i < binary_string.length; i++) { bytes[i] = binary_string.charCodeAt(i); }
         return bytes.buffer;
     }
@@ -423,8 +437,11 @@
       const mData = (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[ym]) ? window.cloudData.monthly[ym] : null;
       
       const b1 = document.getElementById("worklogStatusBadge");
+      window.manualOverrides = {}; 
+
       if (mData && mData.worklogData && mData.worklogData.length > 0) {
           window.parsedSheetsData = mData.worklogData;
+          window.manualOverrides = mData.manualOverrides || {};
           window.worklogFileName = mData.worklogFileName || "";
           document.getElementById('cellJ6Input').value = mData.draftJ6 || "";
           document.getElementById('cellJ10Input').value = mData.draftJ10 || "";
@@ -439,6 +456,7 @@
           document.getElementById('cellJ11Input').value = "";
           b1.className = "text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold truncate max-w-[180px]";
           b1.textContent = "無資料";
+          resetSourceTags();
       }
       renderWorkdayBadges();
       window.recalculateAndRenderAll();
@@ -470,21 +488,13 @@
       document.getElementById("workdayBadges").innerHTML = days.map(d => {
         let cls = "", icon = "";
         if (d.isWorkday) {
-          if (window.parsedSheetsData.length > 0 && !uploadedSet.has(d.mmdd)) { cls = "badge-workday badge-missing"; icon = "⚠️缺 "; }
+          if (window.parsedSheetsData.length > 0 && !uploadedSet.has(d.mmdd) && !(window.manualOverrides[d.mmdd] && (window.manualOverrides[d.mmdd].valid || window.manualOverrides[d.mmdd].leave))) { 
+              cls = "badge-workday badge-missing"; icon = "⚠️缺 "; 
+          }
           else { cls = "badge-workday"; }
         } else { cls = "badge-holiday"; }
-        return `<button onclick="toggleDayStatus('${d.mmdd}',${d.isWorkday})" class="text-[11px] px-2 py-1 rounded border shadow-sm ${cls}">${icon}${d.day}(${d.dowName})</button>`;
+        return `<button onclick="toggleDayStatus('${d.mmdd}', ${d.isWorkday})" class="text-[11px] px-2 py-1 rounded border shadow-sm ${cls}">${icon}${d.day}(${d.dowName})</button>`;
       }).join("");
-    }
-
-    function classifyRowDefaultMode(task, validFlag) {
-      const t = (task || "").trim();
-      const vf = (validFlag || "").trim();
-      if (t.includes("請假") || t.includes("休假") || t.includes("特休") || t.includes("病假") || t.includes("事假")) return "leave";
-      if (vf.includes("不列入")) return "exclude";
-      if (vf === "無" || vf.includes("無效")) return "invalid";
-      if (t.includes("加班") || t.startsWith("報加班")) return "ot";
-      return "valid";
     }
 
     window.autoSaveText = function() {
@@ -512,295 +522,297 @@
           for (let r = 1; r < rowsAoA.length; r++) {
             const row = rowsAoA[r];
             if (!row) continue;
-            const task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
-            const hours = row[2] !== undefined && row[2] !== null && row[2] !== "" ? parseFloat(row[2]) : 0;
-            const validFlag = row[4] !== undefined && row[4] !== null ? String(row[4]).trim() : "";
+            let task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
+            let hours = row[2] !== undefined && row[2] !== null && row[2] !== "" ? parseFloat(row[2]) : 0;
+            let validFlag = row[4] !== undefined && row[4] !== null ? String(row[4]).trim() : "";
+            let mode = "valid";
+            if (task.includes("請假") || task.includes("休假") || task.includes("特休") || task.includes("病假")) mode = "leave";
+            else if (validFlag.includes("不列入")) mode = "exclude";
+            else if (validFlag === "無" || validFlag.includes("無效")) mode = "invalid";
+            else if (task.includes("加班") || task.startsWith("報加班")) mode = "ot";
+
             if ((hours && !isNaN(hours) && hours > 0) || validFlag !== "") {
-              items.push({ id: rowIdCounter++, sheetName: sheetName.trim(), task, hours: isNaN(hours) ? 0 : hours, validFlag, mode: classifyRowDefaultMode(task, validFlag) });
+              items.push({ id: rowIdCounter++, sheetName: sheetName.trim(), task, hours: isNaN(hours) ? 0 : hours, validFlag, mode });
             }
           }
           sheets.push({ sheetName: sheetName.trim(), rows: items });
         });
         window.parsedSheetsData = sheets;
+        window.manualOverrides = {}; 
         
         const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
         if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
         window.cloudData.monthly[ym].worklogData = sheets;
+        window.cloudData.monthly[ym].manualOverrides = {};
         window.cloudData.monthly[ym].worklogFileName = file.name;
 
         const b1 = document.getElementById("worklogStatusBadge");
         b1.className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold truncate max-w-[180px]";
         b1.textContent = "✅ " + file.name;
-        renderWorkdayBadges();
+        
+        resetSourceTags();
         window.recalculateAndRenderAll();
+        if (!document.getElementById('cellJ6Input').value) window.generateAllDrafts(true);
       };
       reader.readAsArrayBuffer(file);
     }
 
-    window.changeSpecialItemMode = function(rowId, newMode) {
-      window.parsedSheetsData.forEach(s => s.rows.forEach(r => { if (r.id === rowId) r.mode = newMode; }));
-      const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-      if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
-      window.cloudData.monthly[ym].worklogData = window.parsedSheetsData;
-      window.recalculateAndRenderAll();
+    // --- 日曆表手動修改核心 ---
+    window.updateDailyOverride = function(mmdd, field, val) {
+        if (!window.manualOverrides) window.manualOverrides = {};
+        if (!window.manualOverrides[mmdd]) window.manualOverrides[mmdd] = {};
+        window.manualOverrides[mmdd][field] = field === 'task' ? val : (parseFloat(val) || 0);
+        
+        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
+        window.cloudData.monthly[ym].manualOverrides = window.manualOverrides;
+        
+        window.recalculateAndRenderAll();
     }
 
-    // --- 本地智慧字庫與獨立重整功能 ---
-    const j6Templates = [
-        "投入「{p}」專案執行，如期交付階段性任務，確保專案進度與品質。",
-        "針對「{p}」進行視覺與體驗優化，有效提升設計產出效益。",
-        "參與「{p}」專案製作，與團隊密切配合達成專案既定目標。",
-        "高效完成「{p}」相關設計需求，確保最終產出符合規格與期待。",
-        "負責「{p}」專案之設計落地，兼顧時效性與整體視覺完整度。"
-    ];
-    
-    const j10Templates = [
-        "即時回應主管交辦之急件與設計需求，並於時限內高品質交付。",
-        "配合專案需求進行彈性調整，展現高度配合度。",
-        "主動回報專案進度與潛在問題，確保資訊同步。",
-        "確實達成主管交辦之各項設計任務，確保產出符合預期品質。",
-        "積極溝通並釐清需求細節，減少來回修改的時間成本。",
-        "在遇到排程衝突時能主動協調，確保高優先級任務順利過關。"
-    ];
-    
-    const j11Templates = [
-        "積極與跨部門團隊進行協作溝通，確保各項專案順利落地執行。",
-        "參與部門會議並分享設計實務經驗，促進團隊學習成長。",
-        "嚴守團隊紀律，落實工時填報與個人專案進度管理。",
-        "配合團隊運作節奏，適時支援同事處理專案設計瓶頸。",
-        "遵循公司規範與工作流程，確保跨部門檔案交接順暢。",
-        "主動維持良好的工作溝通與互動，營造正向的團隊氛圍。"
-    ];
+    window.getComputedMonthData = function() {
+        const year = document.getElementById("yearSelect").value;
+        const month = document.getElementById("monthSelect").value;
+        const daysInfo = getDaysInMonthInfo(year, month);
+        
+        const computedDays = [];
+        let totalValid = 0, totalOt = 0, totalInvalid = 0, totalLeave = 0;
+        const projectMap = new Map();
 
-    function getRandomThree(arr) {
-        let shuffled = [...arr].sort(() => 0.5 - Math.random());
-        return `1. ${shuffled[0]}\n2. ${shuffled[1]}\n3.${shuffled[2]}`;
-    }
+        daysInfo.days.forEach(d => {
+            let valid = 0, ot = 0, invalid = 0, leave = 0, exclude = 0;
+            let tasks = [];
 
-    window.regenerateJ6 = function() {
-        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) return;
-        const map = new Map();
-        window.parsedSheetsData.forEach(s => {
-            if(s.rows) {
-                s.rows.forEach(r => {
-                    if (r.mode === "valid" || r.mode === "ot") {
-                        let taskStr = r.task ? String(r.task) : "";
-                        let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-                        map.set(name, (map.get(name) || 0) + parseFloat(r.hours || 0));
-                    }
+            // 1. 抓取 Excel 原始資料
+            const sheet = window.parsedSheetsData.find(s => s.sheetName === d.mmdd || s.sheetName.includes(d.mmdd) || (parseInt(s.sheetName,10)==parseInt(d.mmdd,10)));
+            if (sheet && sheet.rows) {
+                sheet.rows.forEach(r => {
+                    if (r.mode === "valid") valid += r.hours;
+                    else if (r.mode === "ot") ot += r.hours;
+                    else if (r.mode === "invalid") invalid += r.hours;
+                    else if (r.mode === "leave") leave += r.hours;
+                    else if (r.mode === "exclude") exclude += r.hours;
+                    if (r.task) tasks.push(r.task);
                 });
             }
-        });
-        const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        let lines = [];
-        if (sorted.length > 0) {
-            sorted.forEach(([name, hrs], idx) => {
-                let tmpl = j6Templates[Math.floor(Math.random() * j6Templates.length)];
-                lines.push(`${idx + 1}.${tmpl.replace('{p}', name)}`);
+
+            // 2. 套用使用者在表格的「手動修改覆蓋」
+            const ov = window.manualOverrides[d.mmdd];
+            if (ov) {
+                if (ov.valid !== undefined) valid = ov.valid;
+                if (ov.ot !== undefined) ot = ov.ot;
+                if (ov.invalid !== undefined) invalid = ov.invalid;
+                if (ov.leave !== undefined) leave = ov.leave;
+                if (ov.exclude !== undefined) exclude = ov.exclude;
+                if (ov.task !== undefined) tasks = [ov.task]; 
+            }
+
+            const total = valid + ot + invalid + leave;
+            totalValid += valid; totalOt += ot; totalInvalid += invalid; totalLeave += leave;
+
+            // 專案排行計算 (使用覆蓋後的時數與專案名)
+            if (valid > 0 || ot > 0) {
+                let mainTask = (tasks.length > 0 ? tasks[0] : "一般支援").replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+                projectMap.set(mainTask, (projectMap.get(mainTask) || 0) + valid + ot);
+            }
+
+            computedDays.push({
+                mmdd: d.mmdd,
+                dateLabel: `${d.day} (${d.dowName})`,
+                isWorkday: d.isWorkday,
+                valid, ot, invalid, leave, exclude, total,
+                taskSummary: tasks.join("、")
             });
-        } else {
-            lines.push("1. 穩定交付本月各項常態性任務與設計支援，維持部門業務順利運作。");
-        }
-        document.getElementById('cellJ6Input').value = lines.join("\n");
-        window.autoSaveText();
-    }
+        });
 
-    window.regenerateJ10 = function() {
-        document.getElementById('cellJ10Input').value = getRandomThree(j10Templates);
-        window.autoSaveText();
-    }
-
-    window.regenerateJ11 = function() {
-        document.getElementById('cellJ11Input').value = getRandomThree(j11Templates);
-        window.autoSaveText();
-    }
-
-    window.generateAllDrafts = function(isSilent = false) {
-        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
-            if(!isSilent) alert("請先上傳工時紀錄！");
-            return;
-        }
-        window.regenerateJ6();
-        window.regenerateJ10();
-        window.regenerateJ11();
-        
-        if(!isSilent) {
-            const btn = document.getElementById('aiDraftBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `✅ 帶入成功！`;
-            setTimeout(() => { btn.innerHTML = originalText; }, 2000);
-        }
+        return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap };
     }
 
     window.recalculateAndRenderAll = function() {
-      const year = document.getElementById("yearSelect").value;
-      const month = document.getElementById("monthSelect").value;
-      const { days, totalWorkdays } = getDaysInMonthInfo(year, month);
-      
-      const stdBaseHours = totalWorkdays * 8;
-      const targetHours = +(stdBaseHours * 0.8).toFixed(2);
+        const data = window.getComputedMonthData();
+        const stdBaseHours = data.daysInfo.totalWorkdays * 8;
+        const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
-      document.getElementById("statBaseHours").innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
-      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
-         document.getElementById("statOtHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
-         document.getElementById("statInvalidHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
-         document.getElementById("statLeaveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
-         document.getElementById("statEffectiveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
-         document.getElementById("statJ4Percent").textContent = `0%`;
-         document.getElementById("statH4Score").textContent = `0`;
-         document.getElementById("anomalyList").innerHTML = `<li class="text-slate-500 list-none -ml-4">無異常</li>`;
-         document.getElementById("specialItemsList").innerHTML = `<div class="text-slate-400 text-[11px] py-2">無特殊標記項目</div>`;
-         document.getElementById("dailyTableBody").innerHTML = ``;
-         document.getElementById("projectRankList").innerHTML = `<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>`;
-         return;
-      }
+        document.getElementById("statBaseHours").innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
+        document.getElementById("statOtHours").innerHTML = `${data.totalOt}<span class="text-xs font-normal">h</span>`;
+        document.getElementById("statInvalidHours").innerHTML = `${data.totalInvalid}<span class="text-xs font-normal">h</span>`;
+        document.getElementById("statLeaveHours").innerHTML = `${data.totalLeave}<span class="text-xs font-normal">h</span>`;
+        
+        const effectiveHours = stdBaseHours + data.totalOt - data.totalInvalid - data.totalLeave;
+        const j4Percent = targetHours > 0 ? (effectiveHours / targetHours) * 100 : 0;
+        const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
-      let totalOt = 0, totalInvalid = 0, totalLeave = 0, totalExcluded = 0;
-      window.parsedSheetsData.forEach(s => {
-        if(s.rows) {
-            s.rows.forEach(r => {
-              if (r.mode === "ot") totalOt += r.hours;
-              else if (r.mode === "invalid") totalInvalid += r.hours;
-              else if (r.mode === "leave") totalLeave += r.hours;
-              else if (r.mode === "exclude") totalExcluded += r.hours;
-            });
-        }
-      });
+        document.getElementById("statEffectiveHours").innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
+        document.getElementById("statJ4Percent").textContent = `${j4Percent.toFixed(1)}%`;
+        document.getElementById("statH4Score").textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
 
-      const effectiveHours = stdBaseHours + totalOt - totalInvalid - totalLeave;
-      const j4Percent = targetHours > 0 ? (effectiveHours / targetHours) * 100 : 0;
-      const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
+        document.getElementById("cellH4Input").value = h4Score === 120 ? 120 : Math.round(j4Percent);
+        const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
+        document.getElementById("cellJ4Input").value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
 
-      document.getElementById("statOtHours").innerHTML = `${totalOt}<span class="text-xs font-normal">h</span>`;
-      document.getElementById("statInvalidHours").innerHTML = `${totalInvalid}<span class="text-xs font-normal">h</span>`;
-      document.getElementById("statLeaveHours").innerHTML = `${totalLeave}<span class="text-xs font-normal">h</span>`;
-      document.getElementById("statEffectiveHours").innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
-      document.getElementById("statJ4Percent").textContent = `${j4Percent.toFixed(1)}%`;
-      document.getElementById("statH4Score").textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
-
-      document.getElementById("cellH4Input").value = h4Score === 120 ? 120 : Math.round(j4Percent);
-      const j4FormulaParts = `${totalWorkdays}x8` + (totalOt > 0 ? `+${totalOt}` : "") + (totalInvalid > 0 ? `-${totalInvalid}` : "") + (totalLeave > 0 ? `-${totalLeave}` : "");
-      document.getElementById("cellJ4Input").value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${totalWorkdays} x 8 x 0.8=${targetHours})) * 100\% =${j4Percent.toFixed(2)}%`;
-
-      updateJ14TrainingBox();
-      renderAnomaliesAndSpecialList(days);
-      
-      try { window.renderDailyTable(); } catch(e) { console.error(e); }
-      try { window.renderProjectRanking(); } catch(e) { console.error(e); }
-
-      // 如果草稿區是空的，上傳當下會自動帶入第一套說法
-      if (!document.getElementById('cellJ6Input').value) {
-          window.generateAllDrafts(true);
-      }
+        renderDailyTable(data.computedDays);
+        renderProjectRanking(data.projectMap);
+        renderWorkdayBadges();
     }
 
-    function updateJ14TrainingBox() {
-      const trainingRows = [];
-      window.parsedSheetsData.forEach(s => {
-        if(s.rows) {
-            s.rows.forEach(r => {
-              if ((r.task && (r.task.includes("訓練") || r.task.includes("課程") || r.task.includes("講座"))) || r.mode === "exclude") {
-                trainingRows.push({ sheetName: s.sheetName, task: r.task, hours: r.hours });
-              }
-            });
+    function renderDailyTable(computedDays) {
+        const tbody = document.getElementById("dailyTableBody");
+        const filterOnlyAnomaly = document.getElementById("filterUnder8Only").checked;
+        
+        const rowsHtml = [];
+        let hasAnomaly = false;
+
+        computedDays.forEach(c => {
+            const isUnder8 = c.isWorkday && c.total < 8;
+            if (isUnder8) hasAnomaly = true;
+            if (filterOnlyAnomaly && !isUnder8) return;
+            
+            let rowClass = "";
+            if (isUnder8) rowClass = "row-under";
+            else if (!c.isWorkday && c.total > 0) rowClass = "row-over bg-blue-50";
+
+            rowsHtml.push(`
+            <tr class="border-b border-slate-100 ${rowClass}">
+                <td class="py-1 px-3 font-bold text-slate-700">${c.dateLabel}</td>
+                <td class="py-1 px-1 text-center"><input type="number" value="${c.valid}" onchange="updateDailyOverride('${c.mmdd}', 'valid', this.value)" class="editable-input w-10 text-center font-bold text-slate-700"></td>
+                <td class="py-1 px-1 text-center"><input type="number" value="${c.ot}" onchange="updateDailyOverride('${c.mmdd}', 'ot', this.value)" class="editable-input w-10 text-center text-blue-600"></td>
+                <td class="py-1 px-1 text-center"><input type="number" value="${c.invalid}" onchange="updateDailyOverride('${c.mmdd}', 'invalid', this.value)" class="editable-input w-10 text-center text-amber-600"></td>
+                <td class="py-1 px-1 text-center"><input type="number" value="${c.leave}" onchange="updateDailyOverride('${c.mmdd}', 'leave', this.value)" class="editable-input w-10 text-center text-rose-600"></td>
+                <td class="py-1 px-1 text-center"><input type="number" value="${c.exclude}" onchange="updateDailyOverride('${c.mmdd}', 'exclude', this.value)" class="editable-input w-10 text-center text-slate-400"></td>
+                <td class="py-1 px-2 text-center font-black ${isUnder8 ? 'text-rose-600' : 'text-slate-600'}">${c.total}h</td>
+                <td class="py-1 px-2"><input type="text" value="${c.taskSummary}" onchange="updateDailyOverride('${c.mmdd}', 'task', this.value)" class="editable-input w-full text-slate-600" placeholder="專案或事由..."></td>
+            </tr>`);
+        });
+
+        tbody.innerHTML = rowsHtml.join("");
+
+        const auditBadge = document.getElementById("auditBadge");
+        if (hasAnomaly) {
+            auditBadge.className = "px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full animate-pulse";
+            auditBadge.textContent = `🚨 發現工時未滿異常`;
+        } else {
+            auditBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full";
+            auditBadge.textContent = `✅ 每日時數無異常`;
         }
-      });
-      const totalTrainHours = trainingRows.reduce((acc, cur) => acc + cur.hours, 0);
-      const trainScore = Math.round((totalTrainHours / 4) * 100);
-      document.getElementById("cellH14Input").value = totalTrainHours >= 4 ? 100 : trainScore;
-      const lines = trainingRows.map(tr => `${parseInt(tr.sheetName.slice(0, 2), 10)}/${tr.sheetName.slice(2, 4)}完成${tr.hours}hrs-${tr.task}`);
-      document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
     }
 
-    function renderAnomaliesAndSpecialList(monthDays) {
-      const anomalies = [];
-      const uploadedMap = new Map(window.parsedSheetsData.map(s => [s.sheetName, s]));
-      monthDays.forEach(w => {
-        if (w.isWorkday && !uploadedMap.has(w.mmdd)) anomalies.push({ title: `[${w.mmdd}] 缺少上班日分頁` });
-      });
-
-      const specialItems = [];
-      window.parsedSheetsData.forEach(s => {
-        let dayCountedTotal = 0;
-        if(s.rows) {
-            s.rows.forEach(r => {
-              if (r.mode !== "exclude") dayCountedTotal += r.hours;
-              if (r.validFlag !== "" || r.mode !== "valid") specialItems.push({ sheetName: s.sheetName, ...r });
-            });
+    function renderProjectRanking(projectMap) {
+        const sorted = Array.from(projectMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const rankListEl = document.getElementById("projectRankList");
+        if(sorted.length === 0) {
+            rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
+        } else {
+            rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
         }
-        if (dayCountedTotal < 8) anomalies.push({ title: `[${s.sheetName}] 總時數僅 ${dayCountedTotal}h (未滿 8h)` });
-      });
-
-      const auditBadge = document.getElementById("auditBadge");
-      if (anomalies.length > 0) {
-        auditBadge.className = "px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full animate-pulse";
-        auditBadge.textContent = `🚨 發現 ${anomalies.length} 項異常`;
-        document.getElementById("anomalyList").innerHTML = anomalies.map(a => `<li>${a.title}</li>`).join("");
-      } else {
-        auditBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full";
-        auditBadge.textContent = `✅ 時數檢核通過`;
-        document.getElementById("anomalyList").innerHTML = `<li class="text-slate-500 list-none -ml-4">完美！無異常</li>`;
-      }
-
-      document.getElementById("specialItemsList").innerHTML = specialItems.length === 0 ? `<div class="text-slate-400 text-[11px] py-2">無特殊標記項目</div>` : specialItems.map(item => `<div class="bg-white border border-amber-200 rounded p-2 flex justify-between items-center text-[10px]"><div class="font-bold truncate w-24" title="${item.task}">[${item.sheetName}]${item.task}</div><select onchange="changeSpecialItemMode(${item.id}, this.value)" class="border rounded bg-slate-50 px-1 py-0.5"><option value="invalid" ${item.mode === "invalid" ? "selected" : ""}>無效</option><option value="leave" ${item.mode === "leave" ? "selected" : ""}>請假</option><option value="exclude" ${item.mode === "exclude" ? "selected" : ""}>排除</option><option value="valid" ${item.mode === "valid" ? "selected" : ""}>有效</option><option value="ot" ${item.mode === "ot" ? "selected" : ""}>加班</option></select></div>`).join("");
     }
 
-    window.renderDailyTable = function() {
-      const tbody = document.getElementById("dailyTableBody");
-      const filterCheckbox = document.getElementById("filterUnder8Only");
-      const filterOnlyAnomaly = filterCheckbox ? filterCheckbox.checked : false; 
-      
-      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) { tbody.innerHTML = ``; return; }
-
-      const rowsHtml = [];
-      window.parsedSheetsData.forEach(s => {
-        let validH = 0, otH = 0, invalidH = 0, leaveH = 0, excludeH = 0;
-        const taskSummaries = [];
-        if(s.rows) {
-            s.rows.forEach(r => {
-              if (r.mode === "valid") validH += r.hours;
-              else if (r.mode === "ot") otH += r.hours;
-              else if (r.mode === "invalid") invalidH += r.hours;
-              else if (r.mode === "leave") leaveH += r.hours;
-              else if (r.mode === "exclude") excludeH += r.hours;
-              taskSummaries.push(`${r.task}`);
-            });
+    // --- 雙引擎核心與來源標記 ---
+    function setSourceTag(id, status) {
+        const el = document.getElementById(id + "Source");
+        if (!el) return;
+        if (status === 'loading') {
+            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-bold";
+            el.innerHTML = "⏳ 思考中";
+        } else if (status === 'ai') {
+            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold border border-purple-200";
+            el.innerHTML = "✨ AI 生成";
+        } else if (status === 'local') {
+            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200";
+            el.innerHTML = "⚡ 內建備援";
+        } else {
+            el.innerHTML = ""; el.className = "";
         }
-
-        const countedTotal = validH + otH + invalidH + leaveH;
-        const isUnder8 = countedTotal < 8;
-        if (filterOnlyAnomaly && !isUnder8 && excludeH === 0) return;
-
-        rowsHtml.push(`<tr class="${isUnder8 ? "bg-rose-50" : ""} border-b border-slate-100"><td class="py-2 px-3 font-bold text-slate-700">${s.sheetName}</td><td class="py-2 px-2 text-center">${validH}</td><td class="py-2 px-2 text-center text-blue-600">${otH}</td><td class="py-2 px-2 text-center text-amber-600">${invalidH}</td><td class="py-2 px-2 text-center text-rose-600">${leaveH}</td><td class="py-2 px-2 text-center text-slate-400">${excludeH}</td><td class="py-2 px-2 text-center font-bold bg-slate-100">${countedTotal}h</td><td class="py-2 px-3 truncate max-w-[150px]" title="${taskSummaries.join("、")}">${taskSummaries.join("、")}</td></tr>`);
-      });
-      tbody.innerHTML = rowsHtml.join("");
+    }
+    
+    function resetSourceTags() {
+        setSourceTag('j6', ''); setSourceTag('j10', ''); setSourceTag('j11', '');
     }
 
-    window.renderProjectRanking = function() {
-      const map = new Map();
-      if(window.parsedSheetsData) {
-          window.parsedSheetsData.forEach(s => {
-            if(s.rows) {
-                s.rows.forEach(r => {
-                  if (r.mode === "valid" || r.mode === "ot") {
-                    let taskStr = r.task ? String(r.task) : "";
-                    let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-                    let hrs = parseFloat(r.hours) || 0;
-                    map.set(name, (map.get(name) || 0) + hrs);
-                  }
-                });
-            }
-          });
-      }
-      
-      const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      const rankListEl = document.getElementById("projectRankList");
-      
-      if(sorted.length === 0) {
-          rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
-      } else {
-          rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
-      }
+    const j6Templates = ["投入「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」進行設計與體驗優化，有效提升產出效益。", "參與「{p}」專案製作，與團隊密切配合達成目標。"];
+    const j10Templates = ["即時回應主管交辦之急件與設計需求，高品質交付。", "配合專案需求彈性調整，展現高度配合度。", "主動回報進度與潛在問題，確保資訊同步。", "積極溝通釐清需求細節，減少來回修改時間。"];
+    const j11Templates = ["積極與跨部門協作溝通，確保專案順利落地。", "參與會議並分享實務經驗，促進團隊學習。", "嚴守紀律，落實工時填報與專案進度管理。", "主動維持良好溝通互動，營造正向團隊氛圍。"];
+
+    function getLocalText(type, topProjects) {
+        let shuffled = (arr) => [...arr].sort(() => 0.5 - Math.random());
+        if (type === 'j6') {
+            if (!topProjects || topProjects.length === 0) return "1. 穩定交付常態任務，維持業務運作。";
+            let lines = [];
+            topProjects.slice(0,3).forEach((name, idx) => {
+                let tmpl = j6Templates[Math.floor(Math.random() * j6Templates.length)];
+                lines.push(`${idx + 1}. ${tmpl.replace('{p}', name)}`);
+            });
+            return lines.join("\n");
+        }
+        if (type === 'j10') return `1. ${shuffled(j10Templates)[0]}\n2. ${shuffled(j10Templates)[1]}\n3. ${shuffled(j10Templates)[2]}`;
+        if (type === 'j11') return `1. ${shuffled(j11Templates)[0]}\n2. ${shuffled(j11Templates)[1]}\n3. ${shuffled(j11Templates)[2]}`;
+    }
+
+    async function fetchGeminiAI(promptStr) {
+        let apiKey = "";
+        if (window.firebaseGetDoc && window.firebaseDoc && window.firebaseDB) {
+            try {
+                const configDoc = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDB, "config", "system"));
+                if (configDoc.exists()) apiKey = configDoc.data().gemini;
+            } catch (e) { console.log(e); }
+        }
+        if (!apiKey) throw new Error("無金鑰");
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptStr }] }] })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        let rawText = data.candidates[0].content.parts[0].text.trim().replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+        return JSON.parse(rawText);
+    }
+
+    window.regenerateSingle = async function(field) {
+        const data = window.getComputedMonthData();
+        const topProjects = Array.from(data.projectMap.keys()).slice(0,3);
+        const pSum = topProjects.join("、");
+        
+        setSourceTag(field, 'loading');
+        
+        let prompt = "";
+        if (field === 'j6') prompt = `為 UI/UX 設計師撰寫 KPI 中 J6(專案執行效益)，針對專案：${pSum}，描述產出與效益(3點)。回傳 JSON: {"j6": "..."}`;
+        if (field === 'j10') prompt = `為 UI/UX 設計師撰寫 KPI 中 J10(主管滿意度)，描述配合度與溝通(3點)。回傳 JSON: {"j10": "..."}`;
+        if (field === 'j11') prompt = `為 UI/UX 設計師撰寫 KPI 中 J11(團隊滿意度)，描述團隊協作與紀律(3點)。回傳 JSON: {"j11": "..."}`;
+
+        try {
+            const aiData = await fetchGeminiAI(prompt);
+            document.getElementById(`cell${field.toUpperCase()}Input`).value = aiData[field] || aiData.text || aiData;
+            setSourceTag(field, 'ai');
+        } catch(e) {
+            console.log("AI 錯誤，啟動本地備援", e);
+            document.getElementById(`cell${field.toUpperCase()}Input`).value = getLocalText(field, topProjects);
+            setSourceTag(field, 'local');
+        }
+        window.autoSaveText();
+    }
+
+    window.generateAllDrafts = async function(isSilent = false) {
+        const data = window.getComputedMonthData();
+        if (data.totalValid === 0 && data.totalOt === 0) {
+            if(!isSilent) alert("無工時資料可產生草稿！"); return;
+        }
+        const topProjects = Array.from(data.projectMap.entries()).map(([k,v]) => `- ${k}:${v}h`).join("\n");
+        setSourceTag('j6', 'loading'); setSourceTag('j10', 'loading'); setSourceTag('j11', 'loading');
+
+        try {
+            const prompt = `你是一個專業設計師撰寫 KPI。本月專案：\n${topProjects}\n生成三個欄位(繁體中文,各3點)：\n1. j6(專案效益:挑前3專案)\n2. j10(主管滿意度:急件/配合度)\n3. j11(團隊滿意度:跨部門/紀律)\n回傳 JSON: {"j6": "...", "j10": "...", "j11": "..."}`;
+            const aiData = await fetchGeminiAI(prompt);
+            document.getElementById('cellJ6Input').value = aiData.j6 || "";
+            document.getElementById('cellJ10Input').value = aiData.j10 || "";
+            document.getElementById('cellJ11Input').value = aiData.j11 || "";
+            setSourceTag('j6', 'ai'); setSourceTag('j10', 'ai'); setSourceTag('j11', 'ai');
+        } catch(e) {
+            console.log("AI 錯誤，全面切換本地備援", e);
+            const pNames = Array.from(data.projectMap.keys());
+            document.getElementById('cellJ6Input').value = getLocalText('j6', pNames);
+            document.getElementById('cellJ10Input').value = getLocalText('j10', pNames);
+            document.getElementById('cellJ11Input').value = getLocalText('j11', pNames);
+            setSourceTag('j6', 'local'); setSourceTag('j10', 'local'); setSourceTag('j11', 'local');
+        }
+        window.autoSaveText();
     }
 
     window.handleKpiTemplateUpload = function(event) {
