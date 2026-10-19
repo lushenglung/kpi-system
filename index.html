@@ -32,7 +32,6 @@
         </div>
       </div>
       
-      <!-- 乾淨的 Google 登入區塊 (完全隱藏金鑰輸入框) -->
       <div class="flex items-center gap-3">
         <div id="userInfo" class="hidden items-center gap-3 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
           <img id="userAvatar" class="w-6 h-6 rounded-full" src="" alt="avatar">
@@ -51,7 +50,7 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-6 mt-8 space-y-8">
-    <!-- Step 1: 上傳與年月設定 -->
+    <!-- Step 1 -->
     <section class="glass-card rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-blue-500">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -95,7 +94,7 @@
       </div>
     </section>
 
-    <!-- Step 2: 8小時防呆檢核與數據統計 -->
+    <!-- Step 2 -->
     <section class="glass-card rounded-2xl p-6 border-t-4 border-t-amber-400">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -104,7 +103,6 @@
         <span id="auditBadge" class="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full">等待上傳資料...</span>
       </div>
 
-      <!-- 核心數據儀表板 -->
       <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         <div class="p-4 rounded-xl bg-white border border-slate-200 text-center shadow-sm">
           <div class="text-[11px] text-slate-500 font-bold mb-1">標準基礎工時</div>
@@ -133,7 +131,6 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 異常提示區 -->
         <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
           <h3 class="text-xs font-extrabold text-rose-800 mb-2 flex justify-between">
             <span>⚠️ 每日 8 小時未滿提示</span>
@@ -143,7 +140,6 @@
             <li class="text-slate-500 list-none -ml-4">無異常</li>
           </ul>
         </div>
-        <!-- 特殊標記清單 -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <h3 class="text-xs font-extrabold text-amber-900 mb-2">⚙️ 特殊時數微調 (休假/無效工時/排除)</h3>
           <div id="specialItemsList" class="space-y-1.5 max-h-32 overflow-y-auto pr-2"></div>
@@ -162,7 +158,7 @@
       </div>
     </section>
 
-    <!-- Step 3: KPI 報表生成 -->
+    <!-- Step 3 -->
     <section class="glass-card rounded-2xl p-6 border-t-4 border-t-emerald-500">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -171,20 +167,20 @@
         <div class="flex items-center gap-3">
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
-          <button onclick="generateAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
+          <!-- 修正了這顆按鈕的 ID -->
+          <button id="aiDraftBtn" onclick="generateAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
             ✨ AI 一鍵生成草稿
           </button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- 左側：專案排行統計 -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col">
           <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月專案工時排行 (前十名)</h3>
+          <!-- 專案排行清單 -->
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto"></div>
         </div>
 
-        <!-- 右側：報表填寫區 -->
         <div class="lg:col-span-2 space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="border border-orange-200 bg-orange-50/50 rounded-xl p-3">
@@ -222,13 +218,12 @@
     </section>
   </main>
 
-  <!-- Firebase 模組化 SDK (v10) -->
+  <!-- 唯一 Firebase 與邏輯整合腳本 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-    // 🔑 這是您更新後的 Firebase 設定金鑰
     const firebaseConfig = {
       apiKey: "AIzaSyCyQxQSBWWu99hl9M_-Iclxd5kTf0pQoEI",
       authDomain: "chainsea-kpi.firebaseapp.com",
@@ -248,6 +243,9 @@
     window.firebaseDoc = doc;
 
     let currentUser = null;
+    window.parsedSheetsData = []; 
+    let kpiTemplateArrayBuffer = null;
+    const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 
     document.getElementById('loginBtn').addEventListener('click', () => {
       signInWithPopup(auth, provider).catch(error => alert("登入失敗: " + error.message));
@@ -327,22 +325,11 @@
           }
           
           window.onDateSelectChange();
-          if (window.recalculateAndRenderAll) window.recalculateAndRenderAll();
         }
       } catch (e) { console.error("雲端讀取失敗", e); }
     }
-  </script>
 
-  <script>
-    window.parsedSheetsData = []; 
-    let kpiTemplateArrayBuffer = null;
-    const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
-
-    window.onload = function() {
-      initYearSelect();
-      onDateSelectChange();
-    };
-
+    // 初始化下拉選單
     function initYearSelect() {
       const yearSelect = document.getElementById("yearSelect");
       const currentYear = new Date().getFullYear();
@@ -407,7 +394,7 @@
       await fetchTaiwanCalendar(year);
       updateSheetNamePreview();
       renderWorkdayBadges();
-      recalculateAndRenderAll();
+      window.recalculateAndRenderAll();
     }
 
     window.toggleDayStatus = function(mmdd, currentIsWorkday) {
@@ -418,7 +405,7 @@
       overrides[mmdd] = currentIsWorkday ? "holiday" : "workday";
       localStorage.setItem(key, JSON.stringify(overrides));
       renderWorkdayBadges();
-      recalculateAndRenderAll();
+      window.recalculateAndRenderAll();
     }
 
     function renderWorkdayBadges() {
@@ -475,14 +462,14 @@
         document.getElementById("worklogStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold";
         document.getElementById("worklogStatusBadge").textContent = "✅ 已解析";
         renderWorkdayBadges();
-        recalculateAndRenderAll();
+        window.recalculateAndRenderAll();
       };
       reader.readAsArrayBuffer(file);
     }
 
     window.changeSpecialItemMode = function(rowId, newMode) {
       window.parsedSheetsData.forEach(s => s.rows.forEach(r => { if (r.id === rowId) r.mode = newMode; }));
-      recalculateAndRenderAll();
+      window.recalculateAndRenderAll();
     }
 
     window.recalculateAndRenderAll = function() {
@@ -523,7 +510,7 @@
 
       updateJ14TrainingBox();
       renderAnomaliesAndSpecialList(days);
-      renderDailyTable();
+      window.renderDailyTable();
       renderProjectRanking();
     }
 
@@ -616,17 +603,22 @@
     window.generateAiDraft = async function() {
       if (window.parsedSheetsData.length === 0) return alert("請先上傳工時紀錄！");
       
-      const btn = event.currentTarget;
+      const btn = document.getElementById('aiDraftBtn');
       const originalText = btn.innerHTML;
       btn.innerHTML = `⏳ 思考中...`; btn.disabled = true;
 
       try {
         let apiKey = "";
         if (window.firebaseGetDoc && window.firebaseDoc && window.firebaseDB) {
-          const configDoc = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDB, "config", "system"));
-          if (configDoc.exists()) apiKey = configDoc.data().gemini;
+            try {
+                const configDoc = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDB, "config", "system"));
+                if (configDoc.exists()) apiKey = configDoc.data().gemini;
+            } catch (e) {
+                console.log("從資料庫讀取金鑰發生錯誤 (可能為權限設定阻擋): ", e);
+            }
         }
-        if (!apiKey) throw new Error("尚未在 Firebase 雲端設定 Gemini 金鑰");
+        
+        if (!apiKey) throw new Error("無法讀取到 Gemini 金鑰！請確保 Firebase 中的 config/system 已建立 gemini 欄位，且您的資料庫測試模式仍有效。");
 
         const projectMap = new Map();
         window.parsedSheetsData.forEach(s => s.rows.forEach(r => {
@@ -726,6 +718,11 @@
         URL.revokeObjectURL(url);
       } catch (err) { alert("匯出發生錯誤：" + err.message); }
     }
+
+    window.onload = function() {
+      initYearSelect();
+      onDateSelectChange();
+    };
   </script>
 </body>
 </html>
