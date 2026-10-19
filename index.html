@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (直列編輯與自動稽核版)</title>
+  <title>每月工時 & KPI 自動填表系統 (數據驅動版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -34,7 +34,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v7.0 (任務明細直列版)</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v8.0 (數據驅動版)</p>
         </div>
       </div>
       
@@ -134,7 +134,7 @@
         </div>
       </div>
 
-      <!-- 萬能日曆明細表 (可直接編輯、任務直列) -->
+      <!-- 萬能日曆明細表 -->
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
         <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-extrabold text-slate-700">📝 當月每日任務明細與稽核表 <span class="text-slate-400 font-normal ml-2">點選名稱或時數即可直接修改</span></h3>
@@ -194,7 +194,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行專案填入..."></textarea>
+            <textarea id="cellJ6Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行專案與時數填入..."></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
@@ -371,10 +371,7 @@
     }
 
     async function fetchTaiwanCalendar(year) {
-      const cacheKey = `dgpa_cache_${year}`;
-      if (localStorage.getItem(cacheKey)) return true;
-      try {
-        const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
+      const cacheKey = `dgpa_cache_${year}`; if (localStorage.getItem(cacheKey)) return true; try { const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
         if (!res.ok) return false;
         const data = await res.json();
         const overridesByMonth = {};
@@ -541,7 +538,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // --- 日曆表手動修改核心 ---
     window.updateDailyTask = function(mmdd, index, field, value) {
         if (!window.manualOverrides[mmdd]) {
             const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -584,8 +580,6 @@
 
         daysInfo.days.forEach(d => {
             let tasks = [];
-            
-            // 讀取覆寫資料或原始資料
             if (window.manualOverrides[d.mmdd] && Array.isArray(window.manualOverrides[d.mmdd])) {
                 tasks = window.manualOverrides[d.mmdd].map(t => ({...t}));
             } else {
@@ -602,7 +596,6 @@
                 else if (t.mode === 'leave') leave += h;
                 else if (t.mode === 'exclude') exclude += h;
 
-                // 專案排行統計
                 if (t.mode === 'valid' || t.mode === 'ot') {
                     let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
                     projectMap.set(name, (projectMap.get(name) || 0) + h);
@@ -669,7 +662,6 @@
       computedDays.forEach(c => {
           c.tasks.forEach(t => {
               const taskName = t.task || "";
-              // 無視 mode，只要名稱有關鍵字就無條件抓取
               if (taskName.includes("訓練") || taskName.includes("課程") || taskName.includes("講座") || t.mode === "exclude") {
                   trainingTasks.push({ dateStr: c.mmdd, task: taskName, hours: parseFloat(t.hours) || 0 });
               }
@@ -691,15 +683,12 @@
         computedDays.forEach(c => {
             const isUnder8 = c.isWorkday && c.total < 8;
             if (isUnder8) hasAnomaly = true;
-            
-            // 過濾器：如果只顯示異常與假日，則過濾掉「正常上班日」以及「完全沒資料的假日」
             if (filterOnlyAnomaly) {
                 if (c.isWorkday && !isUnder8) return;
                 if (!c.isWorkday && c.tasks.length === 0) return;
             }
             
-            let rowClass = "";
-            let statusBadge = "";
+            let rowClass = ""; let statusBadge = "";
             if (!c.isWorkday) {
                 rowClass = c.tasks.length > 0 ? "bg-blue-50" : "";
                 statusBadge = `<span class="bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-bold">🏖️ 假日</span>`;
@@ -725,7 +714,6 @@
                     <button onclick="removeDailyTask('${c.mmdd}', ${idx})" class="text-rose-300 hover:text-rose-600 px-1 transition text-xs">✕</button>
                 </div>
             `).join("");
-
             tasksHtml += `<button onclick="addDailyTask('${c.mmdd}')" class="text-[10px] text-blue-500 hover:bg-blue-50 px-2 py-0.5 rounded mt-1 border border-dashed border-blue-200 transition">+ 新增項目</button>`;
 
             let statsHtml = `
@@ -793,23 +781,33 @@
         setSourceTag('j6', ''); setSourceTag('j10', ''); setSourceTag('j11', '');
     }
 
-    const j6Templates = ["投入「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」進行設計與體驗優化，有效提升產出效益。", "參與「{p}」專案製作，與團隊密切配合達成目標。", "高效完成「{p}」相關設計需求，確保最終產出符合期待。", "負責「{p}」專案之設計落地，兼顧時效性與視覺完整度。"];
-    const j10Templates = ["即時回應主管交辦之急件與設計需求，並於時限內高品質交付。", "配合專案需求進行彈性調整，展現高度配合度。", "主動回報專案進度與潛在問題，確保資訊同步。", "確實達成主管交辦之各項任務，產出符合預期品質。", "積極溝通釐清需求細節，減少來回修改的時間成本。"];
-    const j11Templates = ["積極與跨部門團隊進行協作溝通，確保各項專案順利落地。", "參與部門會議並分享設計實務經驗，促進團隊學習。", "嚴守團隊紀律，落實工時填報與個人專案進度管理。", "配合團隊運作節奏，適時支援同事處理專案設計瓶頸。", "遵循公司規範與工作流程，確保跨部門檔案交接順暢。"];
+    const j6Templates = ["高度投入 {h} 小時於「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」專案挹注 {h} 小時進行設計與體驗優化，有效提升產出效益。", "主力參與「{p}」專案製作，耗時 {h} 小時與團隊密切配合達成目標。", "高效完成「{p}」相關設計需求（共計 {h} 小時），確保最終產出符合期待。", "負責「{p}」專案之設計落地（投入 {h} 小時），兼顧時效性與視覺完整度。"];
+    const j10Templates = ["即時回應主管交辦之設計需求，於本月 {valid} 小時有效工時內皆維持高品質產出。", "積極溝通釐清需求細節，減少來回修改的時間成本，深獲肯定。", "確實達成主管交辦之各項任務，產出符合預期品質。"];
+    const j11Templates = ["嚴守團隊紀律，本月維持 {valid} 小時的穩定出勤，落實工時填報與專案進度管理。", "積極與跨部門團隊進行協作溝通，確保各項專案順利落地。", "參與會議並分享實務經驗，促進團隊學習與正向氛圍。"];
 
-    function getLocalText(type, topProjects) {
+    function getLocalText(type, topProjObjs, validH, otH) {
         let shuffled = (arr) => [...arr].sort(() => 0.5 - Math.random());
         if (type === 'j6') {
-            if (!topProjects || topProjects.length === 0) return "1. 穩定交付常態任務，維持業務運作。";
+            if (!topProjObjs || topProjObjs.length === 0) return "1. 穩定交付常態任務，維持業務運作。";
             let lines = [];
-            topProjects.slice(0,3).forEach((name, idx) => {
+            topProjObjs.slice(0,3).forEach((proj, idx) => {
                 let tmpl = j6Templates[Math.floor(Math.random() * j6Templates.length)];
-                lines.push(`${idx + 1}. ${tmpl.replace('{p}', name)}`);
+                lines.push(`${idx + 1}. ${tmpl.replace('{p}', proj.name).replace('{h}', proj.hrs)}`);
             });
             return lines.join("\n");
         }
-        if (type === 'j10') return `1. ${shuffled(j10Templates)[0]}\n2. ${shuffled(j10Templates)[1]}\n3. ${shuffled(j10Templates)[2]}`;
-        if (type === 'j11') return `1. ${shuffled(j11Templates)[0]}\n2. ${shuffled(j11Templates)[1]}\n3. ${shuffled(j11Templates)[2]}`;
+        if (type === 'j10') {
+            let pool = [...j10Templates];
+            if (otH > 0) pool.push(`本月配合專案需求彈性調整，支援 ${otH} 小時加班，確保急件與設計需求高品質交付。`);
+            let s = shuffled(pool);
+            return `1. ${s[0].replace('{valid}', validH)}\n2. ${s[1].replace('{valid}', validH)}\n3. ${s[2].replace('{valid}', validH)}`;
+        }
+        if (type === 'j11') {
+            let pool = [...j11Templates];
+            if (otH > 0) pool.push(`配合團隊運作節奏，適時加班支援同事處理專案設計瓶頸。`);
+            let s = shuffled(pool);
+            return `1. ${s[0].replace('{valid}', validH)}\n2. ${s[1].replace('{valid}', validH)}\n3. ${s[2].replace('{valid}', validH)}`;
+        }
     }
 
     async function fetchGeminiAI(promptStr) {
@@ -832,15 +830,15 @@
 
     window.regenerateSingle = async function(field) {
         const data = window.getComputedMonthData();
-        const topProjects = Array.from(data.projectMap.keys()).slice(0,3);
-        const pSum = topProjects.join("、");
+        const topProjObjs = Array.from(data.projectMap.entries()).map(([name, hrs]) => ({name, hrs})).sort((a,b) => b.hrs - a.hrs).slice(0,3);
+        const pSum = topProjObjs.map(p => `${p.name}(${p.hrs}小時)`).join("、");
         
         setSourceTag(field, 'loading');
         
         let prompt = "";
-        if (field === 'j6') prompt = `為 UI/UX 設計師撰寫 KPI 中 J6(專案執行效益)，針對專案：${pSum}，描述產出與效益(3點)。回傳 JSON: {"j6": "..."}`;
-        if (field === 'j10') prompt = `為 UI/UX 設計師撰寫 KPI 中 J10(主管滿意度)，描述配合度與溝通(3點)。回傳 JSON: {"j10": "..."}`;
-        if (field === 'j11') prompt = `為 UI/UX 設計師撰寫 KPI 中 J11(團隊滿意度)，描述團隊協作與紀律(3點)。回傳 JSON: {"j11": "..."}`;
+        if (field === 'j6') prompt = `為 UI/UX 設計師撰寫 KPI 中 J6(專案執行效益)，針對以下專案與時數：${pSum}。請描述產出與效益(分3點)，並務必在句子中自然帶入該專案的「實際時數」以增加可信度。回傳 JSON: {"j6": "..."}`;
+        if (field === 'j10') prompt = `為 UI/UX 設計師撰寫 KPI 中 J10(主管滿意度)，描述配合度與溝通(分3點)。本月有效工時 ${data.totalValid}小時、加班 ${data.totalOt}小時，若有加班請於其中一點提及加班時數。回傳 JSON: {"j10": "..."}`;
+        if (field === 'j11') prompt = `為 UI/UX 設計師撰寫 KPI 中 J11(團隊滿意度)，描述團隊協作與紀律(分3點)。本月有效工時 ${data.totalValid}小時，請於其中一點提及全月穩定貢獻的總有效工時。回傳 JSON: {"j11": "..."}`;
 
         try {
             const aiData = await fetchGeminiAI(prompt);
@@ -848,7 +846,7 @@
             setSourceTag(field, 'ai');
         } catch(e) {
             console.log("AI 錯誤，啟動本地備援", e);
-            document.getElementById(`cell${field.toUpperCase()}Input`).value = getLocalText(field, topProjects);
+            document.getElementById(`cell${field.toUpperCase()}Input`).value = getLocalText(field, topProjObjs, data.totalValid, data.totalOt);
             setSourceTag(field, 'local');
         }
         window.autoSaveCloudData();
@@ -859,11 +857,23 @@
         if (data.totalValid === 0 && data.totalOt === 0) {
             if(!isSilent) alert("無工時資料可產生草稿！"); return;
         }
-        const topProjects = Array.from(data.projectMap.entries()).map(([k,v]) => `- ${k}:${v}h`).join("\n");
+        const topProjObjs = Array.from(data.projectMap.entries()).map(([name, hrs]) => ({name, hrs})).sort((a,b) => b.hrs - a.hrs).slice(0,3);
+        const pSum = topProjObjs.map(p => `- ${p.name}: ${p.hrs}小時`).join("\n");
         setSourceTag('j6', 'loading'); setSourceTag('j10', 'loading'); setSourceTag('j11', 'loading');
 
         try {
-            const prompt = `你是一個專業設計師撰寫 KPI。本月專案：\n${topProjects}\n生成三個欄位(繁體中文,各3點)：\n1. j6(專案效益:挑前3專案)\n2. j10(主管滿意度:急件/配合度)\n3. j11(團隊滿意度:跨部門/紀律)\n回傳 JSON: {"j6": "...", "j10": "...", "j11": "..."}`;
+            const prompt = `你是一個專業設計師撰寫 KPI。本月數據如下：
+            - 總有效工時：${data.totalValid} 小時
+            - 總加班工時：${data.totalOt} 小時
+            - 核心專案與投入時數：
+            ${pSum}
+
+            請生成以下三個欄位(繁體中文, 各3點，不需前綴標題)：
+            1. j6 (專案效益): 挑選前3大專案，請務必在句子中自然帶入該專案的「實際時數」(如: 投入 X 小時於...)，增加真實性。
+            2. j10 (主管滿意度): 描述急件處理與配合度，若有加班請務必提及加班時數。
+            3. j11 (團隊滿意度): 描述跨部門溝通與紀律，請提及全月穩定貢獻的總有效工時。
+            回傳 JSON: {"j6": "...", "j10": "...", "j11": "..."}`;
+            
             const aiData = await fetchGeminiAI(prompt);
             document.getElementById('cellJ6Input').value = aiData.j6 || "";
             document.getElementById('cellJ10Input').value = aiData.j10 || "";
@@ -871,10 +881,9 @@
             setSourceTag('j6', 'ai'); setSourceTag('j10', 'ai'); setSourceTag('j11', 'ai');
         } catch(e) {
             console.log("AI 錯誤，全面切換本地備援", e);
-            const pNames = Array.from(data.projectMap.keys());
-            document.getElementById('cellJ6Input').value = getLocalText('j6', pNames);
-            document.getElementById('cellJ10Input').value = getLocalText('j10', pNames);
-            document.getElementById('cellJ11Input').value = getLocalText('j11', pNames);
+            document.getElementById('cellJ6Input').value = getLocalText('j6', topProjObjs, data.totalValid, data.totalOt);
+            document.getElementById('cellJ10Input').value = getLocalText('j10', topProjObjs, data.totalValid, data.totalOt);
+            document.getElementById('cellJ11Input').value = getLocalText('j11', topProjObjs, data.totalValid, data.totalOt);
             setSourceTag('j6', 'local'); setSourceTag('j10', 'local'); setSourceTag('j11', 'local');
         }
         window.autoSaveCloudData();
