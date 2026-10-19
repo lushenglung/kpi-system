@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (SaaS 日曆版)</title>
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <script src="[https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js](https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js)"></script>
-  <script src="[https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js](https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js)"></script>
-  <link href="[https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap)" rel="stylesheet">
+  <title>每月工時 & KPI 自動填表系統 (智慧歸類版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
     .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
@@ -42,7 +42,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-200">v9.0 雲端 SaaS 專案日曆版</p>
+          <p class="text-[10px] text-blue-200">v9.1 智慧歸類版</p>
         </div>
       </div>
       
@@ -57,7 +57,6 @@
           <button id="logoutBtn" class="text-[10px] text-slate-400 hover:text-white transition">登出</button>
         </div>
         <button id="loginBtn" class="px-4 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold transition shadow flex items-center gap-2">
-          <svg class="w-4 h-4 bg-white rounded-full p-0.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           Google 登入
         </button>
         <button id="syncBtn" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition shadow hidden items-center gap-1.5">
@@ -148,7 +147,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm">
-          <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月專案工時排行 (自動過濾無效)</h3>
+          <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月所有專案與任務工時總覽</h3>
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto pr-2"></div>
         </div>
 
@@ -260,9 +259,9 @@
   <datalist id="projectDictList"></datalist>
 
   <script type="module">
-    import { initializeApp } from "[https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js](https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js)";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "[https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js](https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js)";
-    import { getFirestore, doc, setDoc, getDoc } from "[https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js)";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCyQxQSBWWu99hl9M_-Iclxd5kTf0pQoEI",
@@ -417,7 +416,7 @@
       const cacheKey = `dgpa_cache_${year}`;
       if (localStorage.getItem(cacheKey)) return true;
       try {
-        const res = await fetch(`[https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/$](https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/$){year}.json`);
+        const res = await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
         if (!res.ok) return false;
         const data = await res.json();
         const overridesByMonth = {};
@@ -552,7 +551,6 @@
         if(!window.cloudData) window.cloudData = { monthly: {}, globalSettings: { projects: [] } };
         if(!window.cloudData.globalSettings) window.cloudData.globalSettings = {};
         window.cloudData.globalSettings.projects = window.projectDictionary;
-        // background save
         if(currentUser && window.firebaseDB) {
             setDoc(doc(window.firebaseDB, "kpi_users", currentUser.uid), { cloudData: window.cloudData, timestamp: Date.now() }).catch(e=>console.log(e));
         }
@@ -582,11 +580,10 @@
         if(!window.currentEditingMmdd) return;
         const mmdd = window.currentEditingMmdd;
         const year = document.getElementById("yearSelect").value;
-        const dStr = `2026-${mmdd.slice(0,2)}-${mmdd.slice(2,4)}`; // 年份不重要，取前一天
+        const dStr = `2026-${mmdd.slice(0,2)}-${mmdd.slice(2,4)}`; 
         const dateObj = new Date(year, parseInt(mmdd.slice(0,2))-1, parseInt(mmdd.slice(2,4)));
         dateObj.setDate(dateObj.getDate() - 1);
         
-        // 如果跨月就不支援複製
         if(dateObj.getMonth() !== parseInt(mmdd.slice(0,2))-1) return alert("無法跨月複製昨日任務！");
         
         const y_mmdd = String(dateObj.getMonth()+1).padStart(2,'0') + String(dateObj.getDate()).padStart(2,'0');
@@ -596,7 +593,6 @@
         if(!yInfo || yInfo.tasks.length === 0) return alert("昨日無任何任務紀錄！");
         
         if (!window.manualOverrides) window.manualOverrides = {};
-        // 深度拷貝昨日任務
         window.manualOverrides[mmdd] = yInfo.tasks.map(t => ({...t}));
         renderDrawerTasks(mmdd);
     }
@@ -678,7 +674,6 @@
         const grid = document.getElementById("calendarGrid");
         let html = "";
         
-        // 空白格子補齊月初
         for(let i=0; i<daysInfo.firstDow; i++) {
             html += `<div class="bg-white/50 border-r border-b border-slate-200/50 min-h-[80px]"></div>`;
         }
@@ -713,7 +708,6 @@
                 }
             }
 
-            // 任務摘要預覽
             let tasksPreview = "";
             if (c.tasks.length > 0) {
                 tasksPreview = c.tasks.slice(0,2).map(t => `<div class="text-[9px] truncate text-slate-500 mb-0.5">· ${t.task||'無名稱'}</div>`).join("");
@@ -733,7 +727,6 @@
             </div>`;
         });
         
-        // 補齊最後的空白格子
         const totalCells = daysInfo.firstDow + computedDays.length;
         const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
         for(let i=0; i<remain; i++) {
@@ -742,7 +735,6 @@
         
         grid.innerHTML = html;
     }
-
 
     window.autoSaveCloudData = function() {
         const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
@@ -912,14 +904,73 @@
       document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
     }
 
+    // 🌟 v9.1 智慧自動分組排行榜
     function renderProjectRanking(allTasksMap) {
-        const sorted = Array.from(allTasksMap.entries()).sort((a, b) => b[1] - a[1]);
         const rankListEl = document.getElementById("projectRankList");
-        if(sorted.length === 0) {
+        if(allTasksMap.size === 0) {
             rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
-        } else {
-            rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between items-center text-slate-600 border-b border-slate-100 pb-1.5 mb-1"><span class="truncate pr-2 font-bold">${idx + 1}. ${name}</span> <span class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded shrink-0 font-black">${hrs} h</span></div>`).join("");
+            return;
         }
+
+        const groups = {};
+        
+        Array.from(allTasksMap.entries()).forEach(([rawName, hrs]) => {
+            let mainTask = rawName;
+            let subTask = "";
+
+            const dashMatch = rawName.match(/[-—_]/);
+            if (dashMatch) {
+                const parts = rawName.split(dashMatch[0]);
+                mainTask = parts[0].trim();
+                subTask = parts.slice(1).join(dashMatch[0]).trim();
+            } 
+            else if (rawName === "請假" || rawName === "休假" || rawName === "事假" || rawName === "病假") {
+                mainTask = "🏖️ 請休假";
+            }
+            else {
+                mainTask = rawName.trim();
+            }
+
+            if (!groups[mainTask]) {
+                groups[mainTask] = { totalHrs: 0, items: [] };
+            }
+            
+            groups[mainTask].totalHrs += hrs;
+            if (subTask) {
+                groups[mainTask].items.push({ name: subTask, hrs: hrs });
+            } else if (rawName !== mainTask || groups[mainTask].items.length === 0) {
+                groups[mainTask].items.push({ name: "主體執行", hrs: hrs });
+            }
+        });
+
+        const sortedGroups = Object.entries(groups).sort((a, b) => b[1].totalHrs - a[1].totalHrs);
+
+        let html = "";
+        sortedGroups.forEach(([mainName, data], idx) => {
+            let subItemsHtml = "";
+            if (data.items.length > 1 || (data.items.length === 1 && data.items[0].name !== "主體執行")) {
+                subItemsHtml = `<ul class="mt-1.5 mb-2 ml-4 space-y-1 text-[10px] text-slate-500 border-l-2 border-slate-100 pl-2">`;
+                data.items.sort((a,b) => b.hrs - a.hrs).forEach(item => {
+                    subItemsHtml += `
+                        <li class="flex justify-between items-center hover:text-slate-700 transition">
+                            <span class="truncate pr-2 before:content-['•'] before:mr-1.5 before:text-slate-300">${item.name}</span>
+                            <span class="shrink-0">${item.hrs} h</span>
+                        </li>`;
+                });
+                subItemsHtml += `</ul>`;
+            }
+
+            html += `
+            <div class="border-b border-slate-100 pb-2 mb-2 last:border-0">
+                <div class="flex justify-between items-center text-slate-700">
+                    <span class="truncate pr-2 font-extrabold text-xs text-slate-800">${idx + 1}. ${mainName}</span> 
+                    <span class="text-blue-700 bg-blue-100 px-2 py-0.5 rounded shrink-0 font-black shadow-sm text-xs">${data.totalHrs} h</span>
+                </div>
+                ${subItemsHtml}
+            </div>`;
+        });
+
+        rankListEl.innerHTML = html;
     }
 
     // --- 雙引擎核心與來源標記 ---
@@ -982,7 +1033,7 @@
             } catch (e) { console.log(e); }
         }
         if (!apiKey) throw new Error("無金鑰");
-        const res = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$){apiKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptStr }] }] })
         });
         const data = await res.json();
