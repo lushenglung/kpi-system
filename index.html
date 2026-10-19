@@ -17,13 +17,14 @@
     .calendar-cell:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10; border-color: #3b82f6; }
     .status-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px; border: 1px solid transparent; }
     
-    #drawerOverlay, #dateSelectModalOverlay { transition: opacity 0.3s ease; }
+    #drawerOverlay, #dateSelectModalOverlay, #reassignModalOverlay { transition: opacity 0.3s ease; }
     #editDrawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .drawer-open #drawerOverlay { opacity: 1; pointer-events: auto; }
     .drawer-open #editDrawer { transform: translateX(0); }
     .drawer-closed #drawerOverlay { opacity: 0; pointer-events: none; }
     .drawer-closed #editDrawer { transform: translateX(100%); }
     
+    .drag-target-hover { outline: 2px dashed #38bdf8 !important; background-color: rgba(56, 189, 248, 0.1) !important; }
     input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
@@ -36,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v10.3 深色日曆旗艦版</p>
+          <p class="text-[10px] text-blue-400">v11.0 累加統計與拖曳歸類版</p>
         </div>
       </div>
       
@@ -102,14 +103,16 @@
             </button>
         </div>
         
+        <!-- 微縮版數據看板 (累加實作式) -->
         <div class="flex items-center gap-3 text-[10px] font-bold bg-slate-900 px-4 py-2 rounded-xl border border-slate-700 w-full md:w-auto overflow-x-auto shadow-inner">
-          <div class="flex flex-col items-center"><span class="text-slate-500">標準</span><span id="statBaseHours" class="text-sm text-slate-200">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">標準基準</span><span id="statBaseHours" class="text-sm text-slate-200">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
-          <div class="flex flex-col items-center"><span class="text-slate-500">有效+加班</span><span id="statEffectiveHours" class="text-sm text-emerald-400">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">累計有效+加班</span><span id="statEffectiveHours" class="text-sm text-emerald-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
-          <div class="flex flex-col items-center"><span class="text-slate-500">休假/無效</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">累計休假/無效</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
           <div class="flex flex-col items-center"><span class="text-amber-500">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
+          <input type="hidden" id="statH4Score">
         </div>
       </div>
 
@@ -144,7 +147,10 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-col shadow-inner">
-          <h3 class="text-xs font-extrabold text-slate-300 mb-3 border-b border-slate-700 pb-2">📊 當月專案與任務總覽 (智慧分組)</h3>
+          <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+            <h3 class="text-xs font-extrabold text-slate-300">📊 當月專案總覽 (可拖曳整理)</h3>
+            <span class="text-[9px] text-slate-500">按住手把可拖進專案合併</span>
+          </div>
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto pr-2"></div>
         </div>
 
@@ -167,7 +173,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-400 hover:text-white font-bold bg-slate-800 border border-slate-600 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="系統將自動擷取排行專案與時數填入..."></textarea>
+            <textarea id="cellJ6Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="整理好專案後，點選上方「雙引擎自動生成」或於此手動編輯..."></textarea>
           </div>
           
           <div class="border border-slate-700 rounded-xl p-3 bg-slate-900 shadow-inner focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition">
@@ -177,7 +183,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j10')" class="text-[10px] text-blue-400 hover:text-white font-bold bg-slate-800 border border-slate-600 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ10Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none leading-relaxed"></textarea>
+            <textarea id="cellJ10Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="點選上方「雙引擎自動生成」產出草稿..."></textarea>
           </div>
           
           <div class="border border-slate-700 rounded-xl p-3 bg-slate-900 shadow-inner focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition">
@@ -187,7 +193,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j11')" class="text-[10px] text-blue-400 hover:text-white font-bold bg-slate-800 border border-slate-600 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ11Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none leading-relaxed"></textarea>
+            <textarea id="cellJ11Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="點選上方「雙引擎自動生成」產出草稿..."></textarea>
           </div>
           <input type="hidden" id="cellH4Input">
           <input type="hidden" id="cellH14Input">
@@ -237,6 +243,34 @@
         <button onclick="confirmQuickDateSelect()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition border border-blue-400/50">
           開啟當日工時抽屜
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔀 重新歸類 / 更改任務名稱 Modal -->
+  <div id="reassignModalOverlay" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity">
+    <div class="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 transition-transform" id="reassignModalContent">
+      <div class="bg-slate-900 px-5 py-3 flex justify-between items-center border-b border-slate-700">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">✏️ 重新歸類 / 命名任務</h3>
+        <button onclick="closeReassignModal()" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 mb-1">原始名稱：</label>
+          <div id="reassignOriginalName" class="text-xs text-blue-400 bg-slate-900 p-2 rounded border border-slate-700 font-bold truncate"></div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-300 mb-1">歸屬主任務名稱：</label>
+          <input list="projectDictList" id="reassignMainInput" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2 text-xs font-bold text-white outline-none focus:border-blue-500" placeholder="選取或直接輸入新主任務...">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-300 mb-1">活動 / 細項名稱：</label>
+          <input type="text" id="reassignSubInput" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-blue-500" placeholder="具體活動 (如: 背板重做，可留空)">
+        </div>
+        <div class="pt-2 flex gap-2">
+          <button onclick="confirmReassignTask()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition border border-emerald-400/50">確認合併更新</button>
+          <button onclick="closeReassignModal()" class="px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-xl text-xs transition">取消</button>
+        </div>
       </div>
     </div>
   </div>
@@ -396,6 +430,8 @@
     window.projectDictionary = [];
     window.currentEditingMmdd = null;
     window.activeYm = ""; 
+    window.currentDraggingTask = null;
+    window.targetReassignTask = null;
 
     let saveTimeout = null;
     window.debounceAutoSaveCloudData = function() {
@@ -620,7 +656,100 @@
         if (mmdd) openDrawer(mmdd);
     }
 
-    // --- 側邊抽屜任務編輯 (拆分 主任務 + 活動細項，5類別獨立) ---
+    // --- 🔀 重新歸類 Modal 邏輯 ---
+    window.openReassignModal = function(rawTaskName) {
+        window.targetReassignTask = rawTaskName;
+        document.getElementById("reassignOriginalName").innerText = rawTaskName;
+        
+        let main = rawTaskName;
+        let sub = "";
+        const dashMatch = rawTaskName.match(/[-—_]/);
+        if (dashMatch) {
+            const parts = rawTaskName.split(dashMatch[0]);
+            main = parts[0].trim();
+            sub = parts.slice(1).join(dashMatch[0]).trim();
+        }
+        document.getElementById("reassignMainInput").value = main;
+        document.getElementById("reassignSubInput").value = sub;
+
+        const o = document.getElementById('reassignModalOverlay');
+        const c = document.getElementById('reassignModalContent');
+        o.classList.remove('hidden');
+        void o.offsetWidth;
+        o.classList.remove('opacity-0');
+        c.classList.remove('scale-95');
+    }
+    window.closeReassignModal = function() {
+        const o = document.getElementById('reassignModalOverlay');
+        const c = document.getElementById('reassignModalContent');
+        o.classList.add('opacity-0');
+        c.classList.add('scale-95');
+        setTimeout(() => o.classList.add('hidden'), 300);
+        window.targetReassignTask = null;
+    }
+    window.confirmReassignTask = function() {
+        if (!window.targetReassignTask) return;
+        const main = document.getElementById("reassignMainInput").value.trim();
+        const sub = document.getElementById("reassignSubInput").value.trim();
+        if (!main) return alert("請填寫主任務名稱！");
+        
+        const newFullName = sub ? `${main}-${sub}` : main;
+        applyTaskRenameAcrossMonth(window.targetReassignTask, newFullName);
+        closeReassignModal();
+    }
+
+    // 全局套用任務改名與合併
+    function applyTaskRenameAcrossMonth(oldName, newName) {
+        const data = window.getComputedMonthData();
+        data.computedDays.forEach(c => {
+            let modified = false;
+            c.tasks.forEach(t => {
+                let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
+                if (name === oldName || t.task === oldName) {
+                    t.task = newName;
+                    modified = true;
+                }
+            });
+            if (modified) {
+                if (!window.manualOverrides) window.manualOverrides = {};
+                window.manualOverrides[c.mmdd] = c.tasks;
+            }
+        });
+        window.recalculateAndRenderAll();
+        window.silentSyncToCloud();
+    }
+
+    // --- 拖曳歸類 (Drag & Drop) ---
+    window.handleDragStart = function(e, taskName) {
+        window.currentDraggingTask = taskName;
+        e.dataTransfer.setData("text/plain", taskName);
+        e.dataTransfer.effectAllowed = "move";
+    }
+    window.handleDragOver = function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.classList.add("drag-target-hover");
+    }
+    window.handleDragLeave = function(e) {
+        e.currentTarget.classList.remove("drag-target-hover");
+    }
+    window.handleDrop = function(e, targetMainName) {
+        e.preventDefault();
+        e.currentTarget.classList.remove("drag-target-hover");
+        const draggedTask = window.currentDraggingTask || e.dataTransfer.getData("text/plain");
+        if (!draggedTask || draggedTask === targetMainName) return;
+
+        let sub = draggedTask;
+        const dashMatch = draggedTask.match(/[-—_]/);
+        if (dashMatch) {
+            const parts = draggedTask.split(dashMatch[0]);
+            sub = parts.slice(1).join(dashMatch[0]).trim();
+        }
+        const newFullName = `${targetMainName}-${sub}`;
+        applyTaskRenameAcrossMonth(draggedTask, newFullName);
+    }
+
+    // --- 側邊抽屜任務編輯 ---
     window.openDrawer = function(mmdd) {
         window.currentEditingMmdd = mmdd;
         const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -698,7 +827,7 @@
                     </div>
                 </div>
 
-                <!-- 5 類獨立按鈕 (包含獨立無效項目) -->
+                <!-- 5 類獨立按鈕 -->
                 <div class="flex gap-1 pt-1">
                     <button onclick="setTaskMode('${mmdd}', ${idx}, 'valid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='valid' ? 'bg-emerald-900/60 border-emerald-400 text-emerald-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">有效</button>
                     <button onclick="setTaskMode('${mmdd}', ${idx}, 'ot')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='ot' ? 'bg-blue-900/60 border-blue-400 text-blue-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">加班</button>
@@ -728,7 +857,6 @@
         }
     }
 
-    // 即時更新主任務與細項活動，不重繪 DOM 避免失去焦點
     window.updateCompoundTaskSilent = function(mmdd, index, newMain, newSub) {
         if (!window.manualOverrides[mmdd]) {
             const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -751,7 +879,6 @@
         window.debounceAutoSaveCloudData();
     }
 
-    // 即時更新時數並更新總計標籤
     window.updateDailyHoursSilent = function(mmdd, index, value) {
         if (!window.manualOverrides[mmdd]) {
             const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -954,8 +1081,6 @@
         resetSourceTags();
         window.recalculateAndRenderAll();
         window.silentSyncToCloud();
-        
-        if (!document.getElementById('cellJ6Input').value) window.generateAllDrafts(true);
       };
       reader.readAsArrayBuffer(file);
     }
@@ -966,7 +1091,7 @@
         const daysInfo = getDaysInMonthInfo(year, month);
         
         const computedDays = [];
-        let totalValid = 0, totalOt = 0, totalInvalid = 0, totalLeave = 0;
+        let totalValid = 0, totalOt = 0, totalInvalid = 0, totalLeave = 0, totalExclude = 0;
         const projectMap = new Map();
         const allTasksMap = new Map(); 
 
@@ -995,8 +1120,8 @@
                 }
             });
 
-            const total = valid + ot + invalid + leave;
-            totalValid += valid; totalOt += ot; totalInvalid += invalid; totalLeave += leave;
+            const total = valid + ot + invalid + leave + exclude;
+            totalValid += valid; totalOt += ot; totalInvalid += invalid; totalLeave += leave; totalExclude += exclude;
 
             computedDays.push({
                 mmdd: d.mmdd,
@@ -1006,30 +1131,28 @@
             });
         });
 
-        return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap, allTasksMap };
+        return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, totalExclude, projectMap, allTasksMap };
     }
 
-    // 🌟 全面安全防護，杜絕 null 崩潰
+    // 🌟 方案 A：純累加實作式計算引擎
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
         const stdBaseHours = data.daysInfo.totalWorkdays * 8;
         const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
-        const bH = document.getElementById("statBaseHours");
-        if (bH) bH.innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
-        const otH = document.getElementById("statOtHours");
-        if (otH) otH.innerHTML = `${data.totalOt}<span class="text-xs font-normal">h</span>`;
-        const invH = document.getElementById("statInvalidHours");
-        if (invH) invH.innerHTML = `${data.totalInvalid}<span class="text-xs font-normal">h</span>`;
-        const lvH = document.getElementById("statLeaveHours");
-        if (lvH) lvH.innerHTML = `${data.totalLeave}<span class="text-xs font-normal">h</span>`;
-        
-        const effectiveHours = stdBaseHours + data.totalOt - data.totalInvalid - data.totalLeave;
-        const j4Percent = targetHours > 0 ? (effectiveHours / targetHours) * 100 : 0;
+        // 純累加：實填有效工時 + 實填加班
+        const actualEffectiveHours = data.totalValid + data.totalOt;
+        const actualLeaveInvalid = data.totalLeave + data.totalInvalid + data.totalExclude;
+        const j4Percent = targetHours > 0 ? (actualEffectiveHours / targetHours) * 100 : 0;
         const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
-        const effH = document.getElementById("statEffectiveHours");
-        if (effH) effH.innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
+        const bH = document.getElementById("statBaseHours");
+        if (bH) bH.innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
+        const otH = document.getElementById("statEffectiveHours");
+        if (otH) otH.innerHTML = `${actualEffectiveHours}<span class="text-xs font-normal">h</span>`;
+        const lvH = document.getElementById("statLeaveHours");
+        if (lvH) lvH.innerHTML = `${actualLeaveInvalid}<span class="text-xs font-normal">h</span>`;
+        
         const j4P = document.getElementById("statJ4Percent");
         if (j4P) j4P.textContent = `${j4Percent.toFixed(1)}%`;
 
@@ -1038,8 +1161,7 @@
         
         const cellJ4 = document.getElementById("cellJ4Input");
         if (cellJ4) {
-            const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
-            cellJ4.value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
+            cellJ4.value = `實際有效工時：${actualEffectiveHours}小時(有效${data.totalValid}h + 加班${data.totalOt}h)\n最高分數以120分計算。\n(${actualEffectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
         }
 
         updateJ14TrainingBox(data.computedDays);
@@ -1069,6 +1191,7 @@
       }
     }
 
+    // 🌟 方案 1：支援 HTML5 拖曳歸類 + 點擊改名按鈕
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
         if (!rankListEl) return;
@@ -1102,9 +1225,9 @@
             
             groups[mainTask].totalHrs += hrs;
             if (subTask) {
-                groups[mainTask].items.push({ name: subTask, hrs: hrs });
+                groups[mainTask].items.push({ name: subTask, raw: rawName, hrs: hrs });
             } else if (rawName !== mainTask || groups[mainTask].items.length === 0) {
-                groups[mainTask].items.push({ name: "主體執行", hrs: hrs });
+                groups[mainTask].items.push({ name: "主體執行", raw: rawName, hrs: hrs });
             }
         });
 
@@ -1114,22 +1237,35 @@
         sortedGroups.forEach(([mainName, data], idx) => {
             let subItemsHtml = "";
             if (data.items.length > 1 || (data.items.length === 1 && data.items[0].name !== "主體執行")) {
-                subItemsHtml = `<ul class="mt-2 mb-3 ml-4 space-y-1 text-[10px] text-slate-400 border-l border-slate-700 pl-3">`;
+                subItemsHtml = `<ul class="mt-2 mb-2 ml-4 space-y-1.5 text-[10px] text-slate-400 border-l border-slate-700 pl-3">`;
                 data.items.sort((a,b) => b.hrs - a.hrs).forEach(item => {
                     subItemsHtml += `
-                        <li class="flex justify-between items-center hover:text-slate-200 transition">
-                            <span class="truncate pr-2 before:content-['•'] before:mr-1.5 before:text-slate-600">${item.name}</span>
-                            <span class="shrink-0 text-slate-500">${item.hrs} h</span>
+                        <li draggable="true" ondragstart="handleDragStart(event, '${item.raw}')" class="flex justify-between items-center hover:text-slate-200 transition group/item cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-800/80">
+                            <span class="truncate pr-2 flex items-center gap-1.5">
+                                <span class="text-slate-600 select-none">⋮⋮</span>
+                                <span>${item.name}</span>
+                            </span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-slate-500 font-bold">${item.hrs} h</span>
+                                <button onclick="openReassignModal('${item.raw}')" class="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-blue-400 p-0.5 transition" title="重新歸類或命名">✏️</button>
+                            </div>
                         </li>`;
                 });
                 subItemsHtml += `</ul>`;
             }
 
+            // 支援作為 Drop Target 接收拖入的項目
             html += `
-            <div class="border-b border-slate-800 pb-2 mb-3 last:border-0 last:mb-0">
+            <div ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mainName}')" class="border border-slate-800/80 bg-slate-900/40 p-2.5 rounded-xl mb-2 transition">
                 <div class="flex justify-between items-center">
-                    <span class="truncate pr-2 font-extrabold text-xs text-slate-200">${idx + 1}. ${mainName}</span> 
-                    <span class="text-blue-400 bg-blue-900/30 border border-blue-800/50 px-2 py-0.5 rounded shrink-0 font-black shadow-sm text-[10px]">${data.totalHrs} h</span>
+                    <span class="truncate pr-2 font-extrabold text-xs text-slate-200 flex items-center gap-1.5">
+                        <span class="text-slate-500 text-[10px]">${idx + 1}.</span>
+                        <span>${mainName}</span>
+                    </span> 
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-blue-400 bg-blue-900/30 border border-blue-800/50 px-2 py-0.5 rounded font-black shadow-sm text-[10px]">${data.totalHrs} h</span>
+                        <button onclick="openReassignModal('${mainName}')" class="text-slate-500 hover:text-blue-400 text-xs transition" title="修改專案名稱">✏️</button>
+                    </div>
                 </div>
                 ${subItemsHtml}
             </div>`;
