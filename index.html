@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (終極雲端版)</title>
+  <title>每月工時 & KPI 自動填表系統 (本地模板版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -28,7 +28,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v4.6</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v5.0 (穩定脫機版)</p>
         </div>
       </div>
       
@@ -164,8 +164,8 @@
         <div class="flex items-center gap-3">
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
-          <button id="aiDraftBtn" onclick="generateAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
-            ✨ AI 一鍵生成草稿
+          <button id="aiDraftBtn" onclick="generateLocalDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
+            ⚡ 重新帶入預設草稿
           </button>
         </div>
       </div>
@@ -190,7 +190,7 @@
 
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J6 專案執行效益</label>
-            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行前三名專案填入..."></textarea>
           </div>
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J10 客戶 / 主管滿意度</label>
@@ -231,10 +231,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
-
-    window.firebaseDB = db;
-    window.firebaseGetDoc = getDoc;
-    window.firebaseDoc = doc;
 
     let currentUser = null;
 
@@ -311,7 +307,6 @@
           const data = docSnap.data();
           window.cloudData = data.cloudData || { monthly: {} };
 
-          // 讀取 KPI 範本
           if (window.cloudData.template && window.cloudData.template.base64) {
               window.kpiTemplateFileName = window.cloudData.template.fileName;
               window.kpiTemplateBase64 = window.cloudData.template.base64;
@@ -320,8 +315,6 @@
               b2.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold truncate max-w-[180px]";
               b2.textContent = "☁️ " + window.kpiTemplateFileName;
           }
-
-          // 復原當前下拉選單的月份資料
           window.onDateSelectChange();
         }
       } catch (e) { console.error("雲端讀取失敗", e); }
@@ -535,12 +528,59 @@
 
     window.changeSpecialItemMode = function(rowId, newMode) {
       window.parsedSheetsData.forEach(s => s.rows.forEach(r => { if (r.id === rowId) r.mode = newMode; }));
-      
       const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
       if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
       window.cloudData.monthly[ym].worklogData = window.parsedSheetsData;
-
       window.recalculateAndRenderAll();
+    }
+
+    // 本地自動生成草稿邏輯 (完全取代 AI)
+    window.generateLocalDraft = function(isSilent = false) {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+            if(!isSilent) alert("請先上傳工時紀錄！");
+            return;
+        }
+
+        const map = new Map();
+        window.parsedSheetsData.forEach(s => {
+            if(s.rows) {
+                s.rows.forEach(r => {
+                    if (r.mode === "valid" || r.mode === "ot") {
+                        let taskStr = r.task ? String(r.task) : "";
+                        let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+                        let hrs = parseFloat(r.hours) || 0;
+                        map.set(name, (map.get(name) || 0) + hrs);
+                    }
+                });
+            }
+        });
+
+        // 抓取前三名專案
+        const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        let j6Lines = [];
+        if (sorted.length > 0) {
+            sorted.forEach(([name, hrs], index) => {
+                j6Lines.push(`${index + 1}. 投入「${name}」專案設計與執行，如期交付階段性任務，確保專案進度與品質。`);
+            });
+        } else {
+            j6Lines.push("1. 如期完成本月各項常態性任務與設計支援，確保部門業務順利運作。");
+        }
+
+        const j10Text = "1. 即時回應主管交辦之急件與設計需求，並於時限內高品質交付。\n2. 配合專案需求進行彈性調整，展現高度配合度。\n3. 主動回報專案進度與潛在問題，確保資訊同步。";
+        const j11Text = "1. 積極與跨部門團隊進行協作溝通，確保各項專案順利落地執行。\n2. 參與部門會議並分享設計實務經驗，促進團隊學習成長。\n3. 嚴守團隊紀律，落實工時填報與個人專案進度管理。";
+
+        document.getElementById('cellJ6Input').value = j6Lines.join("\n");
+        document.getElementById('cellJ10Input').value = j10Text;
+        document.getElementById('cellJ11Input').value = j11Text;
+
+        window.autoSaveText();
+        
+        if(!isSilent) {
+            const btn = document.getElementById('aiDraftBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `✅ 帶入成功！`;
+            setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+        }
     }
 
     window.recalculateAndRenderAll = function() {
@@ -598,6 +638,11 @@
       
       try { window.renderDailyTable(); } catch(e) { console.error(e); }
       try { window.renderProjectRanking(); } catch(e) { console.error(e); }
+
+      // 如果草稿區是空的，自動幫使用者填寫！
+      if (!document.getElementById('cellJ6Input').value) {
+          window.generateLocalDraft(true);
+      }
     }
 
     function updateJ14TrainingBox() {
@@ -653,7 +698,6 @@
 
     window.renderDailyTable = function() {
       const tbody = document.getElementById("dailyTableBody");
-      
       const filterCheckbox = document.getElementById("filterUnder8Only");
       const filterOnlyAnomaly = filterCheckbox ? filterCheckbox.checked : false; 
       
@@ -707,63 +751,6 @@
           rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
       } else {
           rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
-      }
-    }
-
-    window.generateAiDraft = async function() {
-      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) return alert("請先上傳工時紀錄！");
-      
-      const btn = document.getElementById('aiDraftBtn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = `⏳ 思考中...`; btn.disabled = true;
-
-      try {
-        let apiKey = "";
-        if (window.firebaseGetDoc && window.firebaseDoc && window.firebaseDB) {
-            try {
-                const configDoc = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDB, "config", "system"));
-                if (configDoc.exists()) apiKey = configDoc.data().gemini;
-            } catch (e) {
-                console.log("讀取金鑰發生錯誤: ", e);
-            }
-        }
-        
-        if (!apiKey) throw new Error("無法讀取到 Gemini 金鑰！請確保 Firebase 中的 config/system 已建立 gemini 欄位。");
-
-        const projectMap = new Map();
-        window.parsedSheetsData.forEach(s => {
-            if(s.rows) {
-                s.rows.forEach(r => {
-                  if (r.mode === "valid" || r.mode === "ot") {
-                    let taskStr = r.task ? String(r.task) : "";
-                    let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-                    let hrs = parseFloat(r.hours) || 0;
-                    projectMap.set(name, (projectMap.get(name) || 0) + hrs);
-                  }
-                });
-            }
-        });
-        const projectSummary = Array.from(projectMap.entries()).map(([k, v]) => `- ${k}: ${v}小時`).join("\n");
-        const prompt = `你是一個專業的 UI/UX 與平面設計師，正在撰寫每月 KPI 績效報告。以下是我這個月的專案與工時明細：\n${projectSummary}\n\n請幫我生成以下三個欄位的內容，必須符合繁體中文職場正式用語，並精準對應：\n1. J6 (專案執行效益)：挑選前 3 大高工時專案，具體描述交付成果與量化效益（分 3 點，每點以換行區隔，開頭不要有數字編號）。\n2. J10 (客戶/主管滿意度)：以向上管理、急件交付、修改配合度思考，舉例 3 項具體案例（分 3 點）。\n3. J11 (團隊滿意度)：以跨部門協作、會議、內訓與紀律思考，舉例 3 項具體案例（分 3 點）。\n\n請嚴格回傳 JSON 格式：{"j6": "...", "j10": "...", "j11": "..."}`;
-
-        // 🟢 已全面升級為 gemini-3.8-flash 模型
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
-        let rawText = data.candidates[0].content.parts[0].text.trim().replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
-        const resJson = JSON.parse(rawText);
-        document.getElementById('cellJ6Input').value = resJson.j6 || "";
-        document.getElementById('cellJ10Input').value = resJson.j10 || "";
-        document.getElementById('cellJ11Input').value = resJson.j11 || "";
-        
-        window.autoSaveText(); 
-        alert("✨ AI 草稿生成完畢！");
-      } catch (err) { 
-        alert("AI 生成失敗：" + err.message); 
-      } finally { 
-        btn.innerHTML = originalText; btn.disabled = false; 
       }
     }
 
