@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (智慧歸類版)</title>
+  <title>每月工時 & KPI 自動填表系統 (SaaS 日曆版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -22,7 +22,6 @@
     .status-empty { background: #fef3c7; color: #d97706; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
     
-    /* 滑出抽屜特效 */
     #drawerOverlay { transition: opacity 0.3s ease; }
     #editDrawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .drawer-open #drawerOverlay { opacity: 1; pointer-events: auto; }
@@ -35,19 +34,17 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen pb-20 drawer-closed">
 
-  <!-- 頂部導覽列 -->
   <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
     <div class="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-200">v9.1 智慧歸類版</p>
+          <p class="text-[10px] text-blue-200">v9.2 全自動無感存檔版</p>
         </div>
       </div>
       
       <div class="flex items-center gap-3">
-        <!-- 專案字庫按鈕 -->
         <button onclick="openDictModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
           📚 共用專案庫
         </button>
@@ -59,7 +56,7 @@
         <button id="loginBtn" class="px-4 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold transition shadow flex items-center gap-2">
           Google 登入
         </button>
-        <button id="syncBtn" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition shadow hidden items-center gap-1.5">
+        <button id="syncBtn" onclick="manualSync()" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition shadow hidden items-center gap-1.5">
           ☁️ 儲存雲端
         </button>
       </div>
@@ -67,8 +64,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-6 mt-6 space-y-6">
-    
-    <!-- 模組 1: 年月切換與資料匯入 -->
     <section class="glass-card rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between border-t-4 border-t-blue-500">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black">1</div>
@@ -96,7 +91,6 @@
       </div>
     </section>
 
-    <!-- 模組 2: 視覺化大月曆與數據 -->
     <section class="glass-card rounded-2xl p-6 border-t-4 border-t-amber-400">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -104,7 +98,6 @@
           工時日曆大表 <span class="text-xs text-slate-400 font-normal ml-2">點擊日期格子即可新增或修改專案工時</span>
         </h2>
         
-        <!-- 微縮版數據看板 -->
         <div class="flex items-center gap-3 text-[10px] font-bold bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto">
           <div class="flex flex-col items-center"><span class="text-slate-400">標準</span><span id="statBaseHours" class="text-sm text-slate-700">0h</span></div>
           <div class="w-px h-6 bg-slate-200"></div>
@@ -116,21 +109,15 @@
         </div>
       </div>
 
-      <!-- 日曆網格區 -->
       <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
-        <!-- 星期標題 -->
         <div class="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-[11px] font-black text-slate-500 text-center">
           <div class="py-2 text-rose-500">日</div><div class="py-2">一</div><div class="py-2">二</div>
           <div class="py-2">三</div><div class="py-2">四</div><div class="py-2">五</div><div class="py-2 text-rose-500">六</div>
         </div>
-        <!-- 日曆本體 -->
-        <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px">
-          <!-- JS 動態生成 -->
-        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px"></div>
       </div>
     </section>
 
-    <!-- 模組 3: KPI 草稿與匯出 -->
     <section class="glass-card rounded-2xl p-6 border-t-4 border-t-emerald-500">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -170,7 +157,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none placeholder-slate-300 leading-relaxed" placeholder="系統將自動擷取排行專案與時數填入..."></textarea>
+            <textarea id="cellJ6Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none placeholder-slate-300 leading-relaxed" placeholder="系統將自動擷取排行專案與時數填入..."></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition">
@@ -180,7 +167,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j10')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ10Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none leading-relaxed"></textarea>
+            <textarea id="cellJ10Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none leading-relaxed"></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition">
@@ -190,7 +177,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j11')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ11Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none leading-relaxed"></textarea>
+            <textarea id="cellJ11Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-800 outline-none resize-none leading-relaxed"></textarea>
           </div>
           <input type="hidden" id="cellH4Input">
           <input type="hidden" id="cellH14Input">
@@ -236,7 +223,6 @@
         <button onclick="closeDrawer()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition font-bold text-lg">&times;</button>
       </div>
       
-      <!-- 一鍵複製昨日 -->
       <div class="px-5 py-3 bg-blue-50/50 border-b border-blue-100 flex justify-between items-center">
         <span class="text-[10px] text-blue-700 font-bold">💡 懶人輸入</span>
         <button onclick="copyFromYesterday()" class="bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 text-[10px] font-bold px-3 py-1 rounded shadow-sm transition flex items-center gap-1">
@@ -244,9 +230,7 @@
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/30" id="drawerTaskList">
-        <!-- 任務列表由 JS 生成 -->
-      </div>
+      <div class="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/30" id="drawerTaskList"></div>
       
       <div class="p-5 border-t border-slate-100 bg-white sticky bottom-0 flex justify-between items-center shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
         <div class="text-xs font-bold text-slate-700">單日總計: <span id="drawerTotalHours" class="text-lg font-black ml-1">0</span><span class="text-[10px] text-slate-400">h</span></div>
@@ -255,7 +239,6 @@
     </div>
   </div>
 
-  <!-- 用於 autocomplete 的隱藏 datalist -->
   <datalist id="projectDictList"></datalist>
 
   <script type="module">
@@ -313,7 +296,7 @@
       }
     });
 
-    document.getElementById('syncBtn').addEventListener('click', async () => {
+    window.manualSync = async function() {
       if (!currentUser) return alert("請先登入 Google 帳號！");
       const btn = document.getElementById('syncBtn');
       const originalText = btn.innerHTML;
@@ -325,19 +308,30 @@
         const payload = { cloudData: window.cloudData, timestamp: Date.now() };
         await setDoc(doc(db, "kpi_users", currentUser.uid), payload);
         
-        const b = document.getElementById('syncBtn');
-        b.innerHTML = `✅ 儲存成功`;
-        b.classList.remove('bg-emerald-500'); b.classList.add('bg-blue-500');
+        btn.innerHTML = `✅ 儲存成功`;
+        btn.classList.remove('bg-emerald-500'); btn.classList.add('bg-blue-500');
         setTimeout(() => { 
-            b.innerHTML = originalText; 
-            b.classList.add('bg-emerald-500'); b.classList.remove('bg-blue-500');
-            b.disabled = false;
+            btn.innerHTML = originalText; 
+            btn.classList.add('bg-emerald-500'); btn.classList.remove('bg-blue-500');
+            btn.disabled = false;
         }, 2000);
       } catch (e) {
         alert("儲存失敗：" + e.message);
         btn.innerHTML = originalText; btn.disabled = false;
       }
-    });
+    }
+
+    // 🌟 靜默全自動上傳函數 (不彈出任何提示)
+    window.silentSyncToCloud = async function() {
+        if (!currentUser || !window.firebaseDB) return;
+        window.autoSaveCloudData();
+        const payload = { cloudData: window.cloudData, timestamp: Date.now() };
+        try {
+            await setDoc(doc(window.firebaseDB, "kpi_users", currentUser.uid), payload);
+        } catch (e) {
+            console.error("背景儲存失敗", e);
+        }
+    }
 
     async function loadFromCloud() {
       if (!currentUser) return;
@@ -375,6 +369,16 @@
     window.cloudData = { monthly: {}, globalSettings: { projects: [] }, template: {} };
     window.projectDictionary = [];
     window.currentEditingMmdd = null;
+    window.activeYm = ""; // 紀錄目前正在編輯的「年份-月份」
+
+    let saveTimeout = null;
+    window.debounceAutoSaveCloudData = function() {
+        if(saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            window.autoSaveCloudData();
+            window.silentSyncToCloud();
+        }, 1500); // 停止打字後 1.5 秒自動背景存檔
+    }
 
     const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -453,9 +457,26 @@
       return { days, totalWorkdays, firstDow };
     }
 
+    // 🌟 切換月份時，先備份當前舊月份資料，再讀取新月份
+    window.onDateSelectChange = async function() {
+      // 1. 若目前畫面有載入的舊月份，強制執行無感存檔
+      if (window.activeYm) {
+          window.autoSaveCloudData();
+          window.silentSyncToCloud();
+      }
+
+      // 2. 獲取並設定新的月份標記
+      const year = document.getElementById("yearSelect").value;
+      const month = document.getElementById("monthSelect").value;
+      window.activeYm = year + "-" + month; 
+
+      await fetchTaiwanCalendar(year);
+      updateSheetNamePreview();
+      window.restoreMonthData(); 
+    }
+
     window.restoreMonthData = function() {
-      const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-      const mData = (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[ym]) ? window.cloudData.monthly[ym] : null;
+      const mData = (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[window.activeYm]) ? window.cloudData.monthly[window.activeYm] : null;
       
       const b1 = document.getElementById("worklogStatusBadge");
       window.manualOverrides = {}; 
@@ -490,20 +511,11 @@
       window.recalculateAndRenderAll();
     }
 
-    window.onDateSelectChange = async function() {
-      const year = document.getElementById("yearSelect").value;
-      await fetchTaiwanCalendar(year);
-      updateSheetNamePreview();
-      window.restoreMonthData(); 
-    }
-
-    // --- 字典功能 ---
     window.openDictModal = function() {
         renderDictList();
         const o = document.getElementById('dictModalOverlay');
         const c = document.getElementById('dictModalContent');
         o.classList.remove('hidden');
-        // trigger reflow
         void o.offsetWidth;
         o.classList.remove('opacity-0');
         c.classList.remove('scale-95');
@@ -551,9 +563,7 @@
         if(!window.cloudData) window.cloudData = { monthly: {}, globalSettings: { projects: [] } };
         if(!window.cloudData.globalSettings) window.cloudData.globalSettings = {};
         window.cloudData.globalSettings.projects = window.projectDictionary;
-        if(currentUser && window.firebaseDB) {
-            setDoc(doc(window.firebaseDB, "kpi_users", currentUser.uid), { cloudData: window.cloudData, timestamp: Date.now() }).catch(e=>console.log(e));
-        }
+        window.silentSyncToCloud();
     }
 
     // --- 大月曆與側邊抽屜 ---
@@ -568,12 +578,15 @@
         document.body.classList.remove('drawer-closed');
         document.body.classList.add('drawer-open');
     }
+
+    // 🌟 關閉抽屜時自動存檔
     window.closeDrawer = function() {
         document.body.classList.remove('drawer-open');
         document.body.classList.add('drawer-closed');
         window.currentEditingMmdd = null;
         window.autoSaveCloudData();
         window.recalculateAndRenderAll();
+        window.silentSyncToCloud(); // 觸發背景儲存
     }
 
     window.copyFromYesterday = function() {
@@ -595,6 +608,7 @@
         if (!window.manualOverrides) window.manualOverrides = {};
         window.manualOverrides[mmdd] = yInfo.tasks.map(t => ({...t}));
         renderDrawerTasks(mmdd);
+        window.debounceAutoSaveCloudData();
     }
 
     function renderDrawerTasks(mmdd) {
@@ -646,6 +660,7 @@
         if (field === 'hours') window.manualOverrides[mmdd][index][field] = parseFloat(value) || 0;
         else window.manualOverrides[mmdd][index][field] = value;
         renderDrawerTasks(mmdd); 
+        window.debounceAutoSaveCloudData();
     }
     
     window.setTaskMode = function(mmdd, index, mode) {
@@ -659,6 +674,7 @@
         }
         window.manualOverrides[mmdd].push({ task: "", hours: 0, mode: "valid" });
         renderDrawerTasks(mmdd);
+        window.debounceAutoSaveCloudData();
     }
 
     window.removeDailyTask = function(mmdd, index) {
@@ -668,6 +684,7 @@
         }
         window.manualOverrides[mmdd].splice(index, 1);
         renderDrawerTasks(mmdd);
+        window.debounceAutoSaveCloudData();
     }
 
     function renderBigCalendar(daysInfo, computedDays) {
@@ -736,13 +753,14 @@
         grid.innerHTML = html;
     }
 
+    // 儲存狀態進 local memory 結構中
     window.autoSaveCloudData = function() {
-        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
-        window.cloudData.monthly[ym].draftJ6 = document.getElementById('cellJ6Input').value;
-        window.cloudData.monthly[ym].draftJ10 = document.getElementById('cellJ10Input').value;
-        window.cloudData.monthly[ym].draftJ11 = document.getElementById('cellJ11Input').value;
-        window.cloudData.monthly[ym].manualOverrides = window.manualOverrides;
+        if (!window.activeYm) return;
+        if (!window.cloudData.monthly[window.activeYm]) window.cloudData.monthly[window.activeYm] = {};
+        window.cloudData.monthly[window.activeYm].draftJ6 = document.getElementById('cellJ6Input').value;
+        window.cloudData.monthly[window.activeYm].draftJ10 = document.getElementById('cellJ10Input').value;
+        window.cloudData.monthly[window.activeYm].draftJ11 = document.getElementById('cellJ11Input').value;
+        window.cloudData.monthly[window.activeYm].manualOverrides = window.manualOverrides;
     }
 
     window.handleWorklogUpload = function(event) {
@@ -780,11 +798,10 @@
         window.parsedSheetsData = sheets;
         window.manualOverrides = {}; 
         
-        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
-        window.cloudData.monthly[ym].worklogData = sheets;
-        window.cloudData.monthly[ym].manualOverrides = {};
-        window.cloudData.monthly[ym].worklogFileName = file.name;
+        if (!window.cloudData.monthly[window.activeYm]) window.cloudData.monthly[window.activeYm] = {};
+        window.cloudData.monthly[window.activeYm].worklogData = sheets;
+        window.cloudData.monthly[window.activeYm].manualOverrides = {};
+        window.cloudData.monthly[window.activeYm].worklogFileName = file.name;
 
         const b1 = document.getElementById("worklogStatusBadge");
         b1.className = "bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded shadow-sm text-[9px] truncate max-w-[80px]";
@@ -792,6 +809,8 @@
         
         resetSourceTags();
         window.recalculateAndRenderAll();
+        window.silentSyncToCloud();
+        
         if (!document.getElementById('cellJ6Input').value) window.generateAllDrafts(true);
       };
       reader.readAsArrayBuffer(file);
@@ -904,7 +923,6 @@
       document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
     }
 
-    // 🌟 v9.1 智慧自動分組排行榜
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
         if(allTasksMap.size === 0) {
@@ -1063,7 +1081,7 @@
             document.getElementById(`cell${field.toUpperCase()}Input`).value = getLocalText(field, topProjObjs, data.totalValid, data.totalOt);
             setSourceTag(field, 'local');
         }
-        window.autoSaveCloudData();
+        window.debounceAutoSaveCloudData();
     }
 
     window.generateAllDrafts = async function(isSilent = false) {
@@ -1100,7 +1118,7 @@
             document.getElementById('cellJ11Input').value = getLocalText('j11', topProjObjs, data.totalValid, data.totalOt);
             setSourceTag('j6', 'local'); setSourceTag('j10', 'local'); setSourceTag('j11', 'local');
         }
-        window.autoSaveCloudData();
+        window.debounceAutoSaveCloudData();
     }
 
     window.handleKpiTemplateUpload = function(event) {
@@ -1114,6 +1132,7 @@
         const b2 = document.getElementById("templateStatusBadge");
         b2.className = "bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded shadow-sm text-[9px] truncate max-w-[80px]";
         b2.textContent = file.name;
+        window.silentSyncToCloud();
       };
       reader.readAsArrayBuffer(file);
     }
