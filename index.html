@@ -17,7 +17,7 @@
     .calendar-cell:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10; border-color: #3b82f6; }
     .status-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px; border: 1px solid transparent; }
     
-    #drawerOverlay { transition: opacity 0.3s ease; }
+    #drawerOverlay, #dateSelectModalOverlay { transition: opacity 0.3s ease; }
     #editDrawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .drawer-open #drawerOverlay { opacity: 1; pointer-events: auto; }
     .drawer-open #editDrawer { transform: translateX(0); }
@@ -36,7 +36,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v10.2 深色日曆旗艦版</p>
+          <p class="text-[10px] text-blue-400">v10.3 深色日曆旗艦版</p>
         </div>
       </div>
       
@@ -109,8 +109,7 @@
           <div class="w-px h-6 bg-slate-700"></div>
           <div class="flex flex-col items-center"><span class="text-slate-500">休假/無效</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
-          <div class="flex flex-col items-center"><span class="text-amber-600/80">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
-          <input type="hidden" id="statH4Score">
+          <div class="flex flex-col items-center"><span class="text-amber-500">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
         </div>
       </div>
 
@@ -211,7 +210,7 @@
         <button onclick="closeDictModal()" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
       </div>
       <div class="p-5">
-        <p class="text-[10px] text-slate-400 mb-4">在此新增常用主任務名稱（例如：上櫃記者會設計物、台中辦公室）。未來填寫工時即可從下拉清單快速選取。</p>
+        <p class="text-[10px] text-slate-400 mb-4">在此新增常用主任務名稱（例如：上櫃記者會設計物、台中辦公室）。未來填寫工時即可從下拉選單快速選取。</p>
         <div class="flex gap-2 mb-4">
           <input type="text" id="newDictInput" placeholder="輸入常用主任務名稱" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500">
           <button onclick="addDictItem()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition border border-blue-400/50">新增</button>
@@ -621,7 +620,7 @@
         if (mmdd) openDrawer(mmdd);
     }
 
-    // --- 側邊抽屜任務編輯 (拆分 主任務 + 活動細項) ---
+    // --- 側邊抽屜任務編輯 (拆分 主任務 + 活動細項，5類別獨立) ---
     window.openDrawer = function(mmdd) {
         window.currentEditingMmdd = mmdd;
         const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -671,7 +670,6 @@
         
         let html = "";
         dInfo.tasks.forEach((t, idx) => {
-            // 解析既有任務：拆解「主任務」與「活動細項」
             let mainName = t.task || "";
             let subActivity = "";
             const dashMatch = mainName.match(/[-—_]/);
@@ -688,19 +686,19 @@
                 <div class="grid grid-cols-12 gap-2">
                     <div class="col-span-6">
                         <label class="block text-[9px] text-slate-400 font-bold mb-0.5">主任務名稱 (可下拉)</label>
-                        <input list="projectDictList" value="${mainName}" onchange="updateCompoundTask('${mmdd}', ${idx}, this.value, null)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-500 transition shadow-inner" placeholder="選取或填寫任務...">
+                        <input list="projectDictList" value="${mainName}" oninput="updateCompoundTaskSilent('${mmdd}', ${idx}, this.value, null)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-500 transition shadow-inner" placeholder="選取或填寫任務...">
                     </div>
                     <div class="col-span-4">
                         <label class="block text-[9px] text-slate-400 font-bold mb-0.5">活動 / 細項名稱</label>
-                        <input type="text" value="${subActivity}" onchange="updateCompoundTask('${mmdd}', ${idx}, null, this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-slate-200 outline-none focus:border-blue-500 transition shadow-inner" placeholder="如: 背板重做...">
+                        <input type="text" value="${subActivity}" oninput="updateCompoundTaskSilent('${mmdd}', ${idx}, null, this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-slate-200 outline-none focus:border-blue-500 transition shadow-inner" placeholder="如: 背板重做...">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-[9px] text-slate-400 font-bold mb-0.5 text-center">時數</label>
-                        <input type="number" step="0.5" value="${t.hours}" onchange="updateDailyTaskSilent('${mmdd}', ${idx}, 'hours', this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-black text-center text-blue-400 outline-none focus:border-blue-500 transition shadow-inner">
+                        <input type="number" step="0.5" value="${t.hours}" oninput="updateDailyHoursSilent('${mmdd}', ${idx}, this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-black text-center text-blue-400 outline-none focus:border-blue-500 transition shadow-inner">
                     </div>
                 </div>
 
-                <!-- 5 類獨立按鈕 (新增無效項目) -->
+                <!-- 5 類獨立按鈕 (包含獨立無效項目) -->
                 <div class="flex gap-1 pt-1">
                     <button onclick="setTaskMode('${mmdd}', ${idx}, 'valid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='valid' ? 'bg-emerald-900/60 border-emerald-400 text-emerald-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">有效</button>
                     <button onclick="setTaskMode('${mmdd}', ${idx}, 'ot')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='ot' ? 'bg-blue-900/60 border-blue-400 text-blue-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">加班</button>
@@ -714,19 +712,24 @@
         html += `<button onclick="addDailyTask('${mmdd}')" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-600 bg-slate-800/50 text-slate-400 text-xs font-bold hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 transition flex items-center justify-center gap-2"><span>＋</span> 新增任務項目</button>`;
         
         listEl.innerHTML = html;
-        document.getElementById('drawerTotalHours').innerText = dInfo.total;
-        
+        updateDrawerTotalBadge(dInfo);
+    }
+
+    function updateDrawerTotalBadge(dInfo) {
+        const badge = document.getElementById('drawerTotalHours');
+        if (!badge) return;
+        badge.innerText = dInfo.total;
         if (dInfo.isWorkday && dInfo.total < 8) {
-            document.getElementById('drawerTotalHours').classList.add('text-rose-400');
-            document.getElementById('drawerTotalHours').classList.remove('text-slate-100');
+            badge.classList.add('text-rose-400');
+            badge.classList.remove('text-slate-100');
         } else {
-            document.getElementById('drawerTotalHours').classList.remove('text-rose-400');
-            document.getElementById('drawerTotalHours').classList.add('text-slate-100');
+            badge.classList.remove('text-rose-400');
+            badge.classList.add('text-slate-100');
         }
     }
 
-    // 同步合成「主任務-活動名稱」字串
-    window.updateCompoundTask = function(mmdd, index, newMain, newSub) {
+    // 即時更新主任務與細項活動，不重繪 DOM 避免失去焦點
+    window.updateCompoundTaskSilent = function(mmdd, index, newMain, newSub) {
         if (!window.manualOverrides[mmdd]) {
             const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
             window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
@@ -745,23 +748,34 @@
         const finalSub = (newSub !== null ? newSub : curSub).trim();
 
         window.manualOverrides[mmdd][index].task = finalSub ? `${finalMain}-${finalSub}` : finalMain;
-        renderDrawerTasks(mmdd);
         window.debounceAutoSaveCloudData();
     }
 
-    window.updateDailyTaskSilent = function(mmdd, index, field, value) {
+    // 即時更新時數並更新總計標籤
+    window.updateDailyHoursSilent = function(mmdd, index, value) {
         if (!window.manualOverrides[mmdd]) {
             const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
             window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
         }
-        if (field === 'hours') window.manualOverrides[mmdd][index][field] = parseFloat(value) || 0;
-        else window.manualOverrides[mmdd][index][field] = value;
-        renderDrawerTasks(mmdd); 
+        window.manualOverrides[mmdd][index].hours = parseFloat(value) || 0;
+        
+        let dayTotal = 0;
+        window.manualOverrides[mmdd].forEach(t => { dayTotal += parseFloat(t.hours) || 0; });
+        const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+        dInfo.total = dayTotal;
+        updateDrawerTotalBadge(dInfo);
+        
         window.debounceAutoSaveCloudData();
     }
     
     window.setTaskMode = function(mmdd, index, mode) {
-        updateDailyTaskSilent(mmdd, index, 'mode', mode);
+        if (!window.manualOverrides[mmdd]) {
+            const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+            window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
+        }
+        window.manualOverrides[mmdd][index].mode = mode;
+        renderDrawerTasks(mmdd);
+        window.debounceAutoSaveCloudData();
     }
 
     window.addDailyTask = function(mmdd) {
@@ -995,30 +1009,38 @@
         return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap, allTasksMap };
     }
 
-    // 🌟 修正計算邏輯，確保即使未設定 statH4Score 也能平穩執行完畢
+    // 🌟 全面安全防護，杜絕 null 崩潰
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
         const stdBaseHours = data.daysInfo.totalWorkdays * 8;
         const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
-        document.getElementById("statBaseHours").innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
-        document.getElementById("statOtHours").innerHTML = `${data.totalOt}<span class="text-xs font-normal">h</span>`;
-        document.getElementById("statInvalidHours").innerHTML = `${data.totalInvalid}<span class="text-xs font-normal">h</span>`;
-        document.getElementById("statLeaveHours").innerHTML = `${data.totalLeave}<span class="text-xs font-normal">h</span>`;
+        const bH = document.getElementById("statBaseHours");
+        if (bH) bH.innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
+        const otH = document.getElementById("statOtHours");
+        if (otH) otH.innerHTML = `${data.totalOt}<span class="text-xs font-normal">h</span>`;
+        const invH = document.getElementById("statInvalidHours");
+        if (invH) invH.innerHTML = `${data.totalInvalid}<span class="text-xs font-normal">h</span>`;
+        const lvH = document.getElementById("statLeaveHours");
+        if (lvH) lvH.innerHTML = `${data.totalLeave}<span class="text-xs font-normal">h</span>`;
         
         const effectiveHours = stdBaseHours + data.totalOt - data.totalInvalid - data.totalLeave;
         const j4Percent = targetHours > 0 ? (effectiveHours / targetHours) * 100 : 0;
         const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
-        document.getElementById("statEffectiveHours").innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
-        document.getElementById("statJ4Percent").textContent = `${j4Percent.toFixed(1)}%`;
-        
-        const statH4El = document.getElementById("statH4Score");
-        if (statH4El) statH4El.textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
+        const effH = document.getElementById("statEffectiveHours");
+        if (effH) effH.innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
+        const j4P = document.getElementById("statJ4Percent");
+        if (j4P) j4P.textContent = `${j4Percent.toFixed(1)}%`;
 
-        document.getElementById("cellH4Input").value = h4Score === 120 ? 120 : Math.round(j4Percent);
-        const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
-        document.getElementById("cellJ4Input").value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
+        const cellH4 = document.getElementById("cellH4Input");
+        if (cellH4) cellH4.value = h4Score === 120 ? 120 : Math.round(j4Percent);
+        
+        const cellJ4 = document.getElementById("cellJ4Input");
+        if (cellJ4) {
+            const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
+            cellJ4.value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
+        }
 
         updateJ14TrainingBox(data.computedDays);
         renderBigCalendar(data.daysInfo, data.computedDays);
@@ -1038,14 +1060,19 @@
       });
       const totalTrainHours = trainingTasks.reduce((acc, cur) => acc + cur.hours, 0);
       const trainScore = Math.round((totalTrainHours / 4) * 100);
-      document.getElementById("cellH14Input").value = totalTrainHours >= 4 ? 100 : trainScore;
-      const lines = trainingTasks.map(tr => `${parseInt(tr.dateStr.slice(0, 2), 10)}/${tr.dateStr.slice(2, 4)}完成${tr.hours}hrs- ${tr.task}`);
-      document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
+      const h14 = document.getElementById("cellH14Input");
+      if (h14) h14.value = totalTrainHours >= 4 ? 100 : trainScore;
+      const j14 = document.getElementById("cellJ14Input");
+      if (j14) {
+          const lines = trainingTasks.map(tr => `${parseInt(tr.dateStr.slice(0, 2), 10)}/${tr.dateStr.slice(2, 4)}完成${tr.hours}hrs- ${tr.task}`);
+          j14.value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
+      }
     }
 
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
-        if(allTasksMap.size === 0) {
+        if (!rankListEl) return;
+        if (allTasksMap.size === 0) {
             rankListEl.innerHTML = '<div class="text-slate-500 text-[11px] py-2 text-center border border-dashed border-slate-700 rounded-lg">尚無專案工時資料</div>';
             return;
         }
