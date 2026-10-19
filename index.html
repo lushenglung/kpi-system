@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (雙引擎備援版)</title>
+  <title>每月工時 & KPI 自動填表系統 (直列編輯與自動稽核版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -34,7 +34,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v6.0 (雙引擎備援版)</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v7.0 (任務明細直列版)</p>
         </div>
       </div>
       
@@ -85,7 +85,7 @@
             <div class="font-bold text-slate-700">① 上傳「當月工時紀錄 Excel」</div>
             <span id="worklogStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold max-w-[180px] truncate">無資料</span>
           </div>
-          <p class="text-xs text-slate-500 mb-4">系統會自動解析，您可於下方表格直接修改漏填時數</p>
+          <p class="text-xs text-slate-500 mb-4">系統會自動解析，您可於下方表格直接修改漏填時數與任務明細</p>
           <input type="file" id="worklogInput" accept=".xlsx,.xls" onchange="handleWorklogUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 cursor-pointer" />
         </div>
         <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-emerald-400 transition">
@@ -102,7 +102,7 @@
     <section class="glass-card rounded-2xl p-6 border-t-4 border-t-amber-400">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center text-sm shadow-sm">2</span> 8小時防呆審閱 & 工時統計
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center text-sm shadow-sm">2</span> 8小時防呆審閱 & 任務明細調整
         </h2>
         <span id="auditBadge" class="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full">等待上傳資料...</span>
       </div>
@@ -134,27 +134,22 @@
         </div>
       </div>
 
-      <!-- 萬能日曆明細表 (可直接編輯) -->
+      <!-- 萬能日曆明細表 (可直接編輯、任務直列) -->
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
         <div class="flex justify-between items-center mb-2">
-            <h3 class="text-xs font-extrabold text-slate-700">📝 當月每日工時明細 <span class="text-slate-400 font-normal ml-2">點擊表格內數字或文字即可手動修正漏填</span></h3>
-            <label class="text-[10px] cursor-pointer bg-white px-2 py-0.5 rounded border border-slate-300 hover:bg-slate-100"><input type="checkbox" id="filterUnder8Only" onchange="window.recalculateAndRenderAll()"> 只看異常日期</label>
+            <h3 class="text-xs font-extrabold text-slate-700">📝 當月每日任務明細與稽核表 <span class="text-slate-400 font-normal ml-2">點選名稱或時數即可直接修改</span></h3>
+            <label class="text-[10px] cursor-pointer bg-white px-2 py-0.5 rounded border border-slate-300 hover:bg-slate-100"><input type="checkbox" id="filterUnder8Only" onchange="window.recalculateAndRenderAll()"> 只顯示異常與有紀錄之假日</label>
         </div>
-        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-64 shadow-inner bg-white">
+        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-96 shadow-inner bg-white">
           <table class="w-full text-left border-collapse text-[11px]">
             <thead class="bg-slate-100 text-slate-600 sticky top-0 border-b border-slate-200 z-10 shadow-sm">
               <tr>
-                <th class="py-2 px-3 font-bold w-20">日期</th>
-                <th class="py-2 px-1 text-center w-12">有效</th>
-                <th class="py-2 px-1 text-center w-12">加班</th>
-                <th class="py-2 px-1 text-center w-12">無效</th>
-                <th class="py-2 px-1 text-center w-12">休假</th>
-                <th class="py-2 px-1 text-center w-12">排除</th>
-                <th class="py-2 px-2 text-center font-bold w-12">總計</th>
-                <th class="py-2 px-3">專案 / 任務摘要</th>
+                <th class="py-2 px-3 font-bold w-24">日期與狀態</th>
+                <th class="py-2 px-3 font-bold min-w-[300px]">專案 / 任務明細 (直列可修改)</th>
+                <th class="py-2 px-3 text-center font-bold w-48">單日總計</th>
               </tr>
             </thead>
-            <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
+            <tbody id="dailyTableBody" class="divide-y divide-slate-200"></tbody>
           </table>
         </div>
       </div>
@@ -169,7 +164,7 @@
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
           <button onclick="generateAllDrafts()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
-            ✨ AI 重新產生全部
+            ✨ 雙引擎重新生成
           </button>
         </div>
       </div>
@@ -187,7 +182,7 @@
               <textarea id="cellJ4Input" rows="3" class="w-full text-[11px] p-2 rounded border border-orange-200 outline-none bg-white"></textarea>
             </div>
             <div class="border border-orange-200 bg-orange-50/50 rounded-xl p-3">
-              <label class="block text-[11px] font-bold text-orange-900 mb-2">🎓 J14 內外訓 (學習構面)</label>
+              <label class="block text-[11px] font-bold text-orange-900 mb-2">🎓 J14 內外訓 (學習構面) <span class="font-normal text-orange-700 ml-1 text-[9px]">(自動捕捉所有含"課程/訓練"的任務)</span></label>
               <textarea id="cellJ14Input" rows="3" class="w-full text-[11px] p-2 rounded border border-orange-200 outline-none bg-white"></textarea>
             </div>
           </div>
@@ -199,7 +194,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行專案填入..."></textarea>
+            <textarea id="cellJ6Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行專案填入..."></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
@@ -209,7 +204,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j10')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ10Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ10Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
@@ -219,7 +214,7 @@
                 </label>
                 <button type="button" onclick="regenerateSingle('j11')" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ11Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ11Input" oninput="autoSaveCloudData()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           <input type="hidden" id="cellH4Input">
           <input type="hidden" id="cellH14Input">
@@ -297,26 +292,10 @@
       btn.disabled = true;
 
       try {
-        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-        if (!window.cloudData) window.cloudData = { monthly: {} };
-        if (!window.cloudData.monthly) window.cloudData.monthly = {};
-        
-        window.cloudData.monthly[ym] = {
-            worklogData: window.parsedSheetsData || [],
-            worklogFileName: window.worklogFileName || "",
-            manualOverrides: window.manualOverrides || {},
-            draftJ6: document.getElementById('cellJ6Input').value,
-            draftJ10: document.getElementById('cellJ10Input').value,
-            draftJ11: document.getElementById('cellJ11Input').value
-        };
-        window.cloudData.template = {
-            fileName: window.kpiTemplateFileName || "",
-            base64: window.kpiTemplateBase64 || ""
-        };
-
+        window.autoSaveCloudData();
         const payload = { cloudData: window.cloudData, timestamp: Date.now() };
         await setDoc(doc(db, "kpi_users", currentUser.uid), payload);
-        alert("☁️ 此月份進度（包含手動修改工時）已成功備份至雲端！");
+        alert("☁️ 此月份進度（包含手動修改工時與任務）已成功備份至雲端！");
       } catch (e) {
         alert("儲存失敗：" + e.message);
       } finally {
@@ -441,7 +420,7 @@
 
       if (mData && mData.worklogData && mData.worklogData.length > 0) {
           window.parsedSheetsData = mData.worklogData;
-          window.manualOverrides = mData.manualOverrides || {};
+          if (mData.manualOverrides) window.manualOverrides = mData.manualOverrides;
           window.worklogFileName = mData.worklogFileName || "";
           document.getElementById('cellJ6Input').value = mData.draftJ6 || "";
           document.getElementById('cellJ10Input').value = mData.draftJ10 || "";
@@ -484,25 +463,30 @@
       const year = document.getElementById("yearSelect").value;
       const month = document.getElementById("monthSelect").value;
       const { days } = getDaysInMonthInfo(year, month);
-      const uploadedSet = new Set(window.parsedSheetsData.map(s => s.sheetName));
+      
       document.getElementById("workdayBadges").innerHTML = days.map(d => {
         let cls = "", icon = "";
+        let hasData = false;
+        
+        const rawSheet = window.parsedSheetsData.find(s => s.sheetName === d.mmdd || s.sheetName.includes(d.mmdd) || parseInt(s.sheetName,10)==parseInt(d.mmdd,10));
+        if (rawSheet && rawSheet.rows && rawSheet.rows.length > 0) hasData = true;
+        if (window.manualOverrides[d.mmdd] && window.manualOverrides[d.mmdd].length > 0) hasData = true;
+
         if (d.isWorkday) {
-          if (window.parsedSheetsData.length > 0 && !uploadedSet.has(d.mmdd) && !(window.manualOverrides[d.mmdd] && (window.manualOverrides[d.mmdd].valid || window.manualOverrides[d.mmdd].leave))) { 
-              cls = "badge-workday badge-missing"; icon = "⚠️缺 "; 
-          }
+          if (window.parsedSheetsData.length > 0 && !hasData) { cls = "badge-workday badge-missing"; icon = "⚠️缺 "; }
           else { cls = "badge-workday"; }
         } else { cls = "badge-holiday"; }
-        return `<button onclick="toggleDayStatus('${d.mmdd}', ${d.isWorkday})" class="text-[11px] px-2 py-1 rounded border shadow-sm ${cls}">${icon}${d.day}(${d.dowName})</button>`;
+        return `<button onclick="toggleDayStatus('${d.mmdd}',${d.isWorkday})" class="text-[11px] px-2 py-1 rounded border shadow-sm ${cls}">${icon}${d.day}(${d.dowName})</button>`;
       }).join("");
     }
 
-    window.autoSaveText = function() {
+    window.autoSaveCloudData = function() {
         const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
         if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
         window.cloudData.monthly[ym].draftJ6 = document.getElementById('cellJ6Input').value;
         window.cloudData.monthly[ym].draftJ10 = document.getElementById('cellJ10Input').value;
         window.cloudData.monthly[ym].draftJ11 = document.getElementById('cellJ11Input').value;
+        window.cloudData.monthly[ym].manualOverrides = window.manualOverrides;
     }
 
     window.handleWorklogUpload = function(event) {
@@ -526,7 +510,7 @@
             let hours = row[2] !== undefined && row[2] !== null && row[2] !== "" ? parseFloat(row[2]) : 0;
             let validFlag = row[4] !== undefined && row[4] !== null ? String(row[4]).trim() : "";
             let mode = "valid";
-            if (task.includes("請假") || task.includes("休假") || task.includes("特休") || task.includes("病假")) mode = "leave";
+            if (task.includes("請假") || task.includes("休假") || task.includes("特休") || task.includes("病假") || task.includes("事假")) mode = "leave";
             else if (validFlag.includes("不列入")) mode = "exclude";
             else if (validFlag === "無" || validFlag.includes("無效")) mode = "invalid";
             else if (task.includes("加班") || task.startsWith("報加班")) mode = "ot";
@@ -558,15 +542,34 @@
     }
 
     // --- 日曆表手動修改核心 ---
-    window.updateDailyOverride = function(mmdd, field, val) {
-        if (!window.manualOverrides) window.manualOverrides = {};
-        if (!window.manualOverrides[mmdd]) window.manualOverrides[mmdd] = {};
-        window.manualOverrides[mmdd][field] = field === 'task' ? val : (parseFloat(val) || 0);
-        
-        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
-        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
-        window.cloudData.monthly[ym].manualOverrides = window.manualOverrides;
-        
+    window.updateDailyTask = function(mmdd, index, field, value) {
+        if (!window.manualOverrides[mmdd]) {
+            const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+            window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
+        }
+        if (field === 'hours') window.manualOverrides[mmdd][index][field] = parseFloat(value) || 0;
+        else window.manualOverrides[mmdd][index][field] = value;
+        window.autoSaveCloudData();
+        window.recalculateAndRenderAll();
+    }
+
+    window.addDailyTask = function(mmdd) {
+        if (!window.manualOverrides[mmdd]) {
+            const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+            window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
+        }
+        window.manualOverrides[mmdd].push({ task: "新任務", hours: 0, mode: "valid" });
+        window.autoSaveCloudData();
+        window.recalculateAndRenderAll();
+    }
+
+    window.removeDailyTask = function(mmdd, index) {
+        if (!window.manualOverrides[mmdd]) {
+            const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+            window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
+        }
+        window.manualOverrides[mmdd].splice(index, 1);
+        window.autoSaveCloudData();
         window.recalculateAndRenderAll();
     }
 
@@ -580,48 +583,40 @@
         const projectMap = new Map();
 
         daysInfo.days.forEach(d => {
-            let valid = 0, ot = 0, invalid = 0, leave = 0, exclude = 0;
             let tasks = [];
-
-            // 1. 抓取 Excel 原始資料
-            const sheet = window.parsedSheetsData.find(s => s.sheetName === d.mmdd || s.sheetName.includes(d.mmdd) || (parseInt(s.sheetName,10)==parseInt(d.mmdd,10)));
-            if (sheet && sheet.rows) {
-                sheet.rows.forEach(r => {
-                    if (r.mode === "valid") valid += r.hours;
-                    else if (r.mode === "ot") ot += r.hours;
-                    else if (r.mode === "invalid") invalid += r.hours;
-                    else if (r.mode === "leave") leave += r.hours;
-                    else if (r.mode === "exclude") exclude += r.hours;
-                    if (r.task) tasks.push(r.task);
-                });
+            
+            // 讀取覆寫資料或原始資料
+            if (window.manualOverrides[d.mmdd] && Array.isArray(window.manualOverrides[d.mmdd])) {
+                tasks = window.manualOverrides[d.mmdd].map(t => ({...t}));
+            } else {
+                const sheet = window.parsedSheetsData.find(s => s.sheetName === d.mmdd || s.sheetName.includes(d.mmdd) || (parseInt(s.sheetName,10)==parseInt(d.mmdd,10)));
+                if (sheet && sheet.rows) tasks = sheet.rows.map(r => ({...r}));
             }
 
-            // 2. 套用使用者在表格的「手動修改覆蓋」
-            const ov = window.manualOverrides[d.mmdd];
-            if (ov) {
-                if (ov.valid !== undefined) valid = ov.valid;
-                if (ov.ot !== undefined) ot = ov.ot;
-                if (ov.invalid !== undefined) invalid = ov.invalid;
-                if (ov.leave !== undefined) leave = ov.leave;
-                if (ov.exclude !== undefined) exclude = ov.exclude;
-                if (ov.task !== undefined) tasks = [ov.task]; 
-            }
+            let valid = 0, ot = 0, invalid = 0, leave = 0, exclude = 0;
+            tasks.forEach(t => {
+                let h = parseFloat(t.hours) || 0;
+                if (t.mode === 'valid') valid += h;
+                else if (t.mode === 'ot') ot += h;
+                else if (t.mode === 'invalid') invalid += h;
+                else if (t.mode === 'leave') leave += h;
+                else if (t.mode === 'exclude') exclude += h;
+
+                // 專案排行統計
+                if (t.mode === 'valid' || t.mode === 'ot') {
+                    let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+                    projectMap.set(name, (projectMap.get(name) || 0) + h);
+                }
+            });
 
             const total = valid + ot + invalid + leave;
             totalValid += valid; totalOt += ot; totalInvalid += invalid; totalLeave += leave;
-
-            // 專案排行計算 (使用覆蓋後的時數與專案名)
-            if (valid > 0 || ot > 0) {
-                let mainTask = (tasks.length > 0 ? tasks[0] : "一般支援").replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-                projectMap.set(mainTask, (projectMap.get(mainTask) || 0) + valid + ot);
-            }
 
             computedDays.push({
                 mmdd: d.mmdd,
                 dateLabel: `${d.day} (${d.dowName})`,
                 isWorkday: d.isWorkday,
-                valid, ot, invalid, leave, exclude, total,
-                taskSummary: tasks.join("、")
+                tasks, valid, ot, invalid, leave, exclude, total
             });
         });
 
@@ -629,6 +624,19 @@
     }
 
     window.recalculateAndRenderAll = function() {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+            document.getElementById("statBaseHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+            document.getElementById("statOtHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+            document.getElementById("statInvalidHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+            document.getElementById("statLeaveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+            document.getElementById("statEffectiveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+            document.getElementById("statJ4Percent").textContent = `0%`;
+            document.getElementById("statH4Score").textContent = `0`;
+            document.getElementById("dailyTableBody").innerHTML = ``;
+            document.getElementById("projectRankList").innerHTML = `<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>`;
+            return;
+        }
+
         const data = window.getComputedMonthData();
         const stdBaseHours = data.daysInfo.totalWorkdays * 8;
         const targetHours = +(stdBaseHours * 0.8).toFixed(2);
@@ -650,37 +658,94 @@
         const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
         document.getElementById("cellJ4Input").value = `實際有效工時：${effectiveHours}小時(${j4FormulaParts})\n最高分數以120分計算。\n(${effectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8=${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
 
+        updateJ14TrainingBox(data.computedDays);
         renderDailyTable(data.computedDays);
         renderProjectRanking(data.projectMap);
         renderWorkdayBadges();
     }
 
+    function updateJ14TrainingBox(computedDays) {
+      const trainingTasks = [];
+      computedDays.forEach(c => {
+          c.tasks.forEach(t => {
+              const taskName = t.task || "";
+              // 無視 mode，只要名稱有關鍵字就無條件抓取
+              if (taskName.includes("訓練") || taskName.includes("課程") || taskName.includes("講座") || t.mode === "exclude") {
+                  trainingTasks.push({ dateStr: c.mmdd, task: taskName, hours: parseFloat(t.hours) || 0 });
+              }
+          });
+      });
+      const totalTrainHours = trainingTasks.reduce((acc, cur) => acc + cur.hours, 0);
+      const trainScore = Math.round((totalTrainHours / 4) * 100);
+      document.getElementById("cellH14Input").value = totalTrainHours >= 4 ? 100 : trainScore;
+      const lines = trainingTasks.map(tr => `${parseInt(tr.dateStr.slice(0, 2), 10)}/${tr.dateStr.slice(2, 4)}完成${tr.hours}hrs- ${tr.task}`);
+      document.getElementById("cellJ14Input").value = `${lines.join("\n")}\n${totalTrainHours}/4*100%=${trainScore},得分${trainScore}分。`;
+    }
+
     function renderDailyTable(computedDays) {
         const tbody = document.getElementById("dailyTableBody");
         const filterOnlyAnomaly = document.getElementById("filterUnder8Only").checked;
-        
         const rowsHtml = [];
         let hasAnomaly = false;
 
         computedDays.forEach(c => {
             const isUnder8 = c.isWorkday && c.total < 8;
             if (isUnder8) hasAnomaly = true;
-            if (filterOnlyAnomaly && !isUnder8) return;
+            
+            // 過濾器：如果只顯示異常與假日，則過濾掉「正常上班日」以及「完全沒資料的假日」
+            if (filterOnlyAnomaly) {
+                if (c.isWorkday && !isUnder8) return;
+                if (!c.isWorkday && c.tasks.length === 0) return;
+            }
             
             let rowClass = "";
-            if (isUnder8) rowClass = "row-under";
-            else if (!c.isWorkday && c.total > 0) rowClass = "row-over bg-blue-50";
+            let statusBadge = "";
+            if (!c.isWorkday) {
+                rowClass = c.tasks.length > 0 ? "bg-blue-50" : "";
+                statusBadge = `<span class="bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-bold">🏖️ 假日</span>`;
+            } else if (isUnder8) {
+                rowClass = "row-under";
+                statusBadge = `<span class="bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">🔴 異常</span>`;
+            } else {
+                statusBadge = `<span class="bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded text-[10px] font-bold">🟢 正常</span>`;
+            }
+
+            let tasksHtml = c.tasks.map((t, idx) => `
+                <div class="flex items-center gap-1 mb-1.5 p-1 rounded hover:bg-slate-100/50 transition">
+                    <input type="text" value="${t.task}" onchange="updateDailyTask('${c.mmdd}', ${idx}, 'task', this.value)" class="editable-input flex-1 text-[11px] font-medium text-slate-700" placeholder="任務摘要">
+                    <input type="number" value="${t.hours}" onchange="updateDailyTask('${c.mmdd}', ${idx}, 'hours', this.value)" class="editable-input w-12 text-[11px] font-bold text-center ${t.mode==='ot'?'text-blue-600': (t.mode==='invalid'||t.mode==='leave'||t.mode==='exclude'?'text-rose-500':'text-slate-700')}" step="0.5">
+                    <span class="text-[10px] text-slate-400">h</span>
+                    <select onchange="updateDailyTask('${c.mmdd}', ${idx}, 'mode', this.value)" class="editable-input text-[10px] w-14 text-slate-500 cursor-pointer">
+                        <option value="valid" ${t.mode==='valid'?'selected':''}>有效</option>
+                        <option value="ot" ${t.mode==='ot'?'selected':''}>加班</option>
+                        <option value="invalid" ${t.mode==='invalid'?'selected':''}>無效</option>
+                        <option value="leave" ${t.mode==='leave'?'selected':''}>休假</option>
+                        <option value="exclude" ${t.mode==='exclude'?'selected':''}>排除</option>
+                    </select>
+                    <button onclick="removeDailyTask('${c.mmdd}', ${idx})" class="text-rose-300 hover:text-rose-600 px-1 transition text-xs">✕</button>
+                </div>
+            `).join("");
+
+            tasksHtml += `<button onclick="addDailyTask('${c.mmdd}')" class="text-[10px] text-blue-500 hover:bg-blue-50 px-2 py-0.5 rounded mt-1 border border-dashed border-blue-200 transition">+ 新增項目</button>`;
+
+            let statsHtml = `
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-right bg-white p-1.5 rounded border border-slate-100 shadow-sm">
+                    <div><span class="text-slate-400">有效:</span> <span class="font-bold">${c.valid}</span></div>
+                    <div><span class="text-slate-400">加班:</span> <span class="text-blue-600 font-bold">${c.ot}</span></div>
+                    <div><span class="text-slate-400">無效:</span> <span class="text-amber-600 font-bold">${c.invalid}</span></div>
+                    <div><span class="text-slate-400">休假:</span> <span class="text-rose-600 font-bold">${c.leave}</span></div>
+                </div>
+                <div class="mt-1.5 pt-1.5 border-t border-slate-200 text-center text-xs font-black ${isUnder8 ? 'text-rose-600' : 'text-slate-700'}">單日總計: ${c.total} h</div>
+            `;
 
             rowsHtml.push(`
-            <tr class="border-b border-slate-100 ${rowClass}">
-                <td class="py-1 px-3 font-bold text-slate-700">${c.dateLabel}</td>
-                <td class="py-1 px-1 text-center"><input type="number" value="${c.valid}" onchange="updateDailyOverride('${c.mmdd}', 'valid', this.value)" class="editable-input w-10 text-center font-bold text-slate-700"></td>
-                <td class="py-1 px-1 text-center"><input type="number" value="${c.ot}" onchange="updateDailyOverride('${c.mmdd}', 'ot', this.value)" class="editable-input w-10 text-center text-blue-600"></td>
-                <td class="py-1 px-1 text-center"><input type="number" value="${c.invalid}" onchange="updateDailyOverride('${c.mmdd}', 'invalid', this.value)" class="editable-input w-10 text-center text-amber-600"></td>
-                <td class="py-1 px-1 text-center"><input type="number" value="${c.leave}" onchange="updateDailyOverride('${c.mmdd}', 'leave', this.value)" class="editable-input w-10 text-center text-rose-600"></td>
-                <td class="py-1 px-1 text-center"><input type="number" value="${c.exclude}" onchange="updateDailyOverride('${c.mmdd}', 'exclude', this.value)" class="editable-input w-10 text-center text-slate-400"></td>
-                <td class="py-1 px-2 text-center font-black ${isUnder8 ? 'text-rose-600' : 'text-slate-600'}">${c.total}h</td>
-                <td class="py-1 px-2"><input type="text" value="${c.taskSummary}" onchange="updateDailyOverride('${c.mmdd}', 'task', this.value)" class="editable-input w-full text-slate-600" placeholder="專案或事由..."></td>
+            <tr class="border-b border-slate-200 ${rowClass}">
+                <td class="py-2 px-3 align-top">
+                    <div class="font-black text-slate-700 mb-1 text-xs">${c.dateLabel}</div>
+                    ${statusBadge}
+                </td>
+                <td class="py-2 px-3 align-top">${tasksHtml}</td>
+                <td class="py-2 px-3 align-top bg-slate-50/50">${statsHtml}</td>
             </tr>`);
         });
 
@@ -688,10 +753,10 @@
 
         const auditBadge = document.getElementById("auditBadge");
         if (hasAnomaly) {
-            auditBadge.className = "px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full animate-pulse";
+            auditBadge.className = "px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full animate-pulse shadow-sm";
             auditBadge.textContent = `🚨 發現工時未滿異常`;
         } else {
-            auditBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full";
+            auditBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full shadow-sm";
             auditBadge.textContent = `✅ 每日時數無異常`;
         }
     }
@@ -702,7 +767,7 @@
         if(sorted.length === 0) {
             rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
         } else {
-            rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
+            rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1.5 mb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 bg-blue-50 px-1.5 rounded shrink-0">${hrs} h</span></div>`).join("");
         }
     }
 
@@ -714,10 +779,10 @@
             el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-bold";
             el.innerHTML = "⏳ 思考中";
         } else if (status === 'ai') {
-            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold border border-purple-200";
+            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold border border-purple-200 shadow-sm";
             el.innerHTML = "✨ AI 生成";
         } else if (status === 'local') {
-            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200";
+            el.className = "text-[9px] ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200 shadow-sm";
             el.innerHTML = "⚡ 內建備援";
         } else {
             el.innerHTML = ""; el.className = "";
@@ -728,9 +793,9 @@
         setSourceTag('j6', ''); setSourceTag('j10', ''); setSourceTag('j11', '');
     }
 
-    const j6Templates = ["投入「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」進行設計與體驗優化，有效提升產出效益。", "參與「{p}」專案製作，與團隊密切配合達成目標。"];
-    const j10Templates = ["即時回應主管交辦之急件與設計需求，高品質交付。", "配合專案需求彈性調整，展現高度配合度。", "主動回報進度與潛在問題，確保資訊同步。", "積極溝通釐清需求細節，減少來回修改時間。"];
-    const j11Templates = ["積極與跨部門協作溝通，確保專案順利落地。", "參與會議並分享實務經驗，促進團隊學習。", "嚴守紀律，落實工時填報與專案進度管理。", "主動維持良好溝通互動，營造正向團隊氛圍。"];
+    const j6Templates = ["投入「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」進行設計與體驗優化，有效提升產出效益。", "參與「{p}」專案製作，與團隊密切配合達成目標。", "高效完成「{p}」相關設計需求，確保最終產出符合期待。", "負責「{p}」專案之設計落地，兼顧時效性與視覺完整度。"];
+    const j10Templates = ["即時回應主管交辦之急件與設計需求，並於時限內高品質交付。", "配合專案需求進行彈性調整，展現高度配合度。", "主動回報專案進度與潛在問題，確保資訊同步。", "確實達成主管交辦之各項任務，產出符合預期品質。", "積極溝通釐清需求細節，減少來回修改的時間成本。"];
+    const j11Templates = ["積極與跨部門團隊進行協作溝通，確保各項專案順利落地。", "參與部門會議並分享設計實務經驗，促進團隊學習。", "嚴守團隊紀律，落實工時填報與個人專案進度管理。", "配合團隊運作節奏，適時支援同事處理專案設計瓶頸。", "遵循公司規範與工作流程，確保跨部門檔案交接順暢。"];
 
     function getLocalText(type, topProjects) {
         let shuffled = (arr) => [...arr].sort(() => 0.5 - Math.random());
@@ -786,7 +851,7 @@
             document.getElementById(`cell${field.toUpperCase()}Input`).value = getLocalText(field, topProjects);
             setSourceTag(field, 'local');
         }
-        window.autoSaveText();
+        window.autoSaveCloudData();
     }
 
     window.generateAllDrafts = async function(isSilent = false) {
@@ -812,7 +877,7 @@
             document.getElementById('cellJ11Input').value = getLocalText('j11', pNames);
             setSourceTag('j6', 'local'); setSourceTag('j10', 'local'); setSourceTag('j11', 'local');
         }
-        window.autoSaveText();
+        window.autoSaveCloudData();
     }
 
     window.handleKpiTemplateUpload = function(event) {
