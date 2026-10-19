@@ -28,7 +28,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v4.3</p>
         </div>
       </div>
       
@@ -50,7 +50,6 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-6 mt-8 space-y-8">
-    <!-- Step 1 -->
     <section class="glass-card rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-blue-500">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
         <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -78,7 +77,8 @@
         <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-blue-400 transition">
           <div class="flex justify-between items-center mb-1">
             <div class="font-bold text-slate-700">① 上傳「當月工時紀錄 Excel」</div>
-            <span id="worklogStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold">無資料</span>
+            <!-- 檔名顯示徽章 -->
+            <span id="worklogStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold max-w-[180px] truncate">無資料</span>
           </div>
           <p class="text-xs text-slate-500 mb-4">系統會自動解析分頁，並檢核每日 8 小時</p>
           <input type="file" id="worklogInput" accept=".xlsx,.xls" onchange="handleWorklogUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 cursor-pointer" />
@@ -86,7 +86,8 @@
         <div class="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl p-5 hover:border-emerald-400 transition">
           <div class="flex justify-between items-center mb-1">
             <div class="font-bold text-slate-700">② 上傳「KPI 績效表範本 Excel」</div>
-            <span id="templateStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold">無範本</span>
+            <!-- 檔名顯示徽章 -->
+            <span id="templateStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold max-w-[180px] truncate">無範本</span>
           </div>
           <p class="text-xs text-slate-500 mb-4">將以此檔案為基礎，自動將計算結果填入</p>
           <input type="file" id="kpiTemplateInput" accept=".xlsx" onchange="handleKpiTemplateUpload(event)" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-100 file:text-emerald-700 cursor-pointer" />
@@ -167,7 +168,6 @@
         <div class="flex items-center gap-3">
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
-          <!-- 修正了這顆按鈕的 ID -->
           <button id="aiDraftBtn" onclick="generateAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
             ✨ AI 一鍵生成草稿
           </button>
@@ -177,7 +177,6 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col">
           <h3 class="text-xs font-extrabold text-slate-700 mb-3 border-b border-slate-200 pb-2">📊 當月專案工時排行 (前十名)</h3>
-          <!-- 專案排行清單 -->
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto"></div>
         </div>
 
@@ -195,15 +194,15 @@
 
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J6 專案執行效益</label>
-            <textarea id="cellJ6Input" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J10 客戶 / 主管滿意度</label>
-            <textarea id="cellJ10Input" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ10Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
             <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J11 團隊滿意度</label>
-            <textarea id="cellJ11Input" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
+            <textarea id="cellJ11Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           <input type="hidden" id="cellH4Input">
           <input type="hidden" id="cellH14Input">
@@ -218,7 +217,6 @@
     </section>
   </main>
 
-  <!-- 唯一 Firebase 與邏輯整合腳本 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
@@ -243,9 +241,6 @@
     window.firebaseDoc = doc;
 
     let currentUser = null;
-    window.parsedSheetsData = []; 
-    let kpiTemplateArrayBuffer = null;
-    const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 
     document.getElementById('loginBtn').addEventListener('click', () => {
       signInWithPopup(auth, provider).catch(error => alert("登入失敗: " + error.message));
@@ -285,16 +280,25 @@
       btn.disabled = true;
 
       try {
-        const payload = {
-          worklogData: window.parsedSheetsData || [],
-          worklogYm: document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value,
-          draftJ6: document.getElementById('cellJ6Input').value,
-          draftJ10: document.getElementById('cellJ10Input').value,
-          draftJ11: document.getElementById('cellJ11Input').value,
-          timestamp: Date.now()
+        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+        if (!window.cloudData) window.cloudData = { monthly: {} };
+        if (!window.cloudData.monthly) window.cloudData.monthly = {};
+        
+        window.cloudData.monthly[ym] = {
+            worklogData: window.parsedSheetsData || [],
+            worklogFileName: window.worklogFileName || "",
+            draftJ6: document.getElementById('cellJ6Input').value,
+            draftJ10: document.getElementById('cellJ10Input').value,
+            draftJ11: document.getElementById('cellJ11Input').value
         };
+        window.cloudData.template = {
+            fileName: window.kpiTemplateFileName || "",
+            base64: window.kpiTemplateBase64 || ""
+        };
+
+        const payload = { cloudData: window.cloudData, timestamp: Date.now() };
         await setDoc(doc(db, "kpi_users", currentUser.uid), payload);
-        alert("☁️ 已成功儲存至個人雲端！");
+        alert("☁️ 此月份的進度已成功備份至雲端！");
       } catch (e) {
         alert("儲存失敗：" + e.message);
       } finally {
@@ -309,27 +313,52 @@
         const docSnap = await getDoc(doc(db, "kpi_users", currentUser.uid));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          window.parsedSheetsData = data.worklogData || [];
-          if (data.worklogYm) {
-            const [y, m] = data.worklogYm.split("-");
-            document.getElementById("yearSelect").value = y;
-            document.getElementById("monthSelect").value = m;
+          window.cloudData = data.cloudData || { monthly: {} };
+
+          // 讀取 KPI 範本 (跨月份共用)
+          if (window.cloudData.template && window.cloudData.template.base64) {
+              window.kpiTemplateFileName = window.cloudData.template.fileName;
+              window.kpiTemplateBase64 = window.cloudData.template.base64;
+              window.kpiTemplateArrayBuffer = window.base64ToArrayBuffer(window.kpiTemplateBase64);
+              const b2 = document.getElementById("templateStatusBadge");
+              b2.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold truncate max-w-[180px]";
+              b2.textContent = "☁️ " + window.kpiTemplateFileName;
           }
-          if (data.draftJ6) document.getElementById('cellJ6Input').value = data.draftJ6;
-          if (data.draftJ10) document.getElementById('cellJ10Input').value = data.draftJ10;
-          if (data.draftJ11) document.getElementById('cellJ11Input').value = data.draftJ11;
-          
-          if (window.parsedSheetsData.length > 0) {
-            document.getElementById("worklogStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold";
-            document.getElementById("worklogStatusBadge").textContent = "☁️ 雲端讀取成功";
-          }
-          
+
+          // 復原當前下拉選單的月份資料
           window.onDateSelectChange();
         }
       } catch (e) { console.error("雲端讀取失敗", e); }
     }
+  </script>
 
-    // 初始化下拉選單
+  <script>
+    window.parsedSheetsData = []; 
+    window.worklogFileName = "";
+    window.kpiTemplateFileName = "";
+    window.kpiTemplateBase64 = "";
+    window.kpiTemplateArrayBuffer = null;
+    window.cloudData = { monthly: {}, template: {} };
+    const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
+
+    window.arrayBufferToBase64 = function(buffer) {
+        let binary = '';
+        let bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.byteLength; i++) { binary += String.fromCharCode(bytes[i]); }
+        return window.btoa(binary);
+    }
+    window.base64ToArrayBuffer = function(base64) {
+        let binary_string = window.atob(base64);
+        let bytes = new Uint8Array(binary_string.length);
+        for (let i = 0; i < binary_string.length; i++) { bytes[i] = binary_string.charCodeAt(i); }
+        return bytes.buffer;
+    }
+
+    window.onload = function() {
+      initYearSelect();
+      onDateSelectChange();
+    };
+
     function initYearSelect() {
       const yearSelect = document.getElementById("yearSelect");
       const currentYear = new Date().getFullYear();
@@ -389,12 +418,37 @@
       return { days, totalWorkdays };
     }
 
+    window.restoreMonthData = function() {
+      const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+      const mData = (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[ym]) ? window.cloudData.monthly[ym] : null;
+      
+      const b1 = document.getElementById("worklogStatusBadge");
+      if (mData && mData.worklogData && mData.worklogData.length > 0) {
+          window.parsedSheetsData = mData.worklogData;
+          window.worklogFileName = mData.worklogFileName || "";
+          document.getElementById('cellJ6Input').value = mData.draftJ6 || "";
+          document.getElementById('cellJ10Input').value = mData.draftJ10 || "";
+          document.getElementById('cellJ11Input').value = mData.draftJ11 || "";
+          b1.className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold truncate max-w-[180px]";
+          b1.textContent = window.worklogFileName ? "☁️ " + window.worklogFileName : "☁️ 已載入";
+      } else {
+          window.parsedSheetsData = [];
+          window.worklogFileName = "";
+          document.getElementById('cellJ6Input').value = "";
+          document.getElementById('cellJ10Input').value = "";
+          document.getElementById('cellJ11Input').value = "";
+          b1.className = "text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-500 font-bold truncate max-w-[180px]";
+          b1.textContent = "無資料";
+      }
+      renderWorkdayBadges();
+      window.recalculateAndRenderAll();
+    }
+
     window.onDateSelectChange = async function() {
       const year = document.getElementById("yearSelect").value;
       await fetchTaiwanCalendar(year);
       updateSheetNamePreview();
-      renderWorkdayBadges();
-      window.recalculateAndRenderAll();
+      window.restoreMonthData(); 
     }
 
     window.toggleDayStatus = function(mmdd, currentIsWorkday) {
@@ -433,9 +487,18 @@
       return "valid";
     }
 
+    window.autoSaveText = function() {
+        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
+        window.cloudData.monthly[ym].draftJ6 = document.getElementById('cellJ6Input').value;
+        window.cloudData.monthly[ym].draftJ10 = document.getElementById('cellJ10Input').value;
+        window.cloudData.monthly[ym].draftJ11 = document.getElementById('cellJ11Input').value;
+    }
+
     window.handleWorklogUpload = function(event) {
       const file = event.target.files[0];
       if (!file) return;
+      window.worklogFileName = file.name;
       const reader = new FileReader();
       reader.onload = function(e) {
         const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellDates: true });
@@ -459,8 +522,16 @@
           sheets.push({ sheetName: sheetName.trim(), rows: items });
         });
         window.parsedSheetsData = sheets;
-        document.getElementById("worklogStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold";
-        document.getElementById("worklogStatusBadge").textContent = "✅ 已解析";
+        
+        // 本地更新 monthly object 避免切換月份時遺失
+        const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+        if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
+        window.cloudData.monthly[ym].worklogData = sheets;
+        window.cloudData.monthly[ym].worklogFileName = file.name;
+
+        const b1 = document.getElementById("worklogStatusBadge");
+        b1.className = "text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold truncate max-w-[180px]";
+        b1.textContent = "✅ " + file.name;
         renderWorkdayBadges();
         window.recalculateAndRenderAll();
       };
@@ -469,6 +540,11 @@
 
     window.changeSpecialItemMode = function(rowId, newMode) {
       window.parsedSheetsData.forEach(s => s.rows.forEach(r => { if (r.id === rowId) r.mode = newMode; }));
+      
+      const ym = document.getElementById("yearSelect").value + "-" + document.getElementById("monthSelect").value;
+      if (!window.cloudData.monthly[ym]) window.cloudData.monthly[ym] = {};
+      window.cloudData.monthly[ym].worklogData = window.parsedSheetsData;
+
       window.recalculateAndRenderAll();
     }
 
@@ -481,16 +557,30 @@
       const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
       document.getElementById("statBaseHours").innerHTML = `${stdBaseHours}<span class="text-xs font-normal">h</span>`;
-      if (window.parsedSheetsData.length === 0) return;
+      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+         document.getElementById("statOtHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+         document.getElementById("statInvalidHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+         document.getElementById("statLeaveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+         document.getElementById("statEffectiveHours").innerHTML = `0<span class="text-xs font-normal">h</span>`;
+         document.getElementById("statJ4Percent").textContent = `0%`;
+         document.getElementById("statH4Score").textContent = `0`;
+         document.getElementById("anomalyList").innerHTML = `<li class="text-slate-500 list-none -ml-4">無異常</li>`;
+         document.getElementById("specialItemsList").innerHTML = `<div class="text-slate-400 text-[11px] py-2">無特殊標記項目</div>`;
+         document.getElementById("dailyTableBody").innerHTML = ``;
+         document.getElementById("projectRankList").innerHTML = `<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>`;
+         return;
+      }
 
       let totalOt = 0, totalInvalid = 0, totalLeave = 0, totalExcluded = 0;
       window.parsedSheetsData.forEach(s => {
-        s.rows.forEach(r => {
-          if (r.mode === "ot") totalOt += r.hours;
-          else if (r.mode === "invalid") totalInvalid += r.hours;
-          else if (r.mode === "leave") totalLeave += r.hours;
-          else if (r.mode === "exclude") totalExcluded += r.hours;
-        });
+        if(s.rows) {
+            s.rows.forEach(r => {
+              if (r.mode === "ot") totalOt += r.hours;
+              else if (r.mode === "invalid") totalInvalid += r.hours;
+              else if (r.mode === "leave") totalLeave += r.hours;
+              else if (r.mode === "exclude") totalExcluded += r.hours;
+            });
+        }
       });
 
       const effectiveHours = stdBaseHours + totalOt - totalInvalid - totalLeave;
@@ -511,17 +601,19 @@
       updateJ14TrainingBox();
       renderAnomaliesAndSpecialList(days);
       window.renderDailyTable();
-      renderProjectRanking();
+      window.renderProjectRanking();
     }
 
     function updateJ14TrainingBox() {
       const trainingRows = [];
       window.parsedSheetsData.forEach(s => {
-        s.rows.forEach(r => {
-          if (r.task.includes("訓練") || r.task.includes("課程") || r.task.includes("講座") || r.mode === "exclude") {
-            trainingRows.push({ sheetName: s.sheetName, task: r.task, hours: r.hours });
-          }
-        });
+        if(s.rows) {
+            s.rows.forEach(r => {
+              if ((r.task && (r.task.includes("訓練") || r.task.includes("課程") || r.task.includes("講座"))) || r.mode === "exclude") {
+                trainingRows.push({ sheetName: s.sheetName, task: r.task, hours: r.hours });
+              }
+            });
+        }
       });
       const totalTrainHours = trainingRows.reduce((acc, cur) => acc + cur.hours, 0);
       const trainScore = Math.round((totalTrainHours / 4) * 100);
@@ -540,10 +632,12 @@
       const specialItems = [];
       window.parsedSheetsData.forEach(s => {
         let dayCountedTotal = 0;
-        s.rows.forEach(r => {
-          if (r.mode !== "exclude") dayCountedTotal += r.hours;
-          if (r.validFlag !== "" || r.mode !== "valid") specialItems.push({ sheetName: s.sheetName, ...r });
-        });
+        if(s.rows) {
+            s.rows.forEach(r => {
+              if (r.mode !== "exclude") dayCountedTotal += r.hours;
+              if (r.validFlag !== "" || r.mode !== "valid") specialItems.push({ sheetName: s.sheetName, ...r });
+            });
+        }
         if (dayCountedTotal < 8) anomalies.push({ title: `[${s.sheetName}] 總時數僅 ${dayCountedTotal}h (未滿 8h)` });
       });
 
@@ -564,20 +658,22 @@
     window.renderDailyTable = function() {
       const tbody = document.getElementById("dailyTableBody");
       const filterOnlyAnomaly = document.getElementById("filterUnder8Only").checked;
-      if (window.parsedSheetsData.length === 0) { tbody.innerHTML = ``; return; }
+      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) { tbody.innerHTML = ``; return; }
 
       const rowsHtml = [];
       window.parsedSheetsData.forEach(s => {
         let validH = 0, otH = 0, invalidH = 0, leaveH = 0, excludeH = 0;
         const taskSummaries = [];
-        s.rows.forEach(r => {
-          if (r.mode === "valid") validH += r.hours;
-          else if (r.mode === "ot") otH += r.hours;
-          else if (r.mode === "invalid") invalidH += r.hours;
-          else if (r.mode === "leave") leaveH += r.hours;
-          else if (r.mode === "exclude") excludeH += r.hours;
-          taskSummaries.push(`${r.task}`);
-        });
+        if(s.rows) {
+            s.rows.forEach(r => {
+              if (r.mode === "valid") validH += r.hours;
+              else if (r.mode === "ot") otH += r.hours;
+              else if (r.mode === "invalid") invalidH += r.hours;
+              else if (r.mode === "leave") leaveH += r.hours;
+              else if (r.mode === "exclude") excludeH += r.hours;
+              taskSummaries.push(`${r.task}`);
+            });
+        }
 
         const countedTotal = validH + otH + invalidH + leaveH;
         const isUnder8 = countedTotal < 8;
@@ -588,20 +684,35 @@
       tbody.innerHTML = rowsHtml.join("");
     }
 
-    function renderProjectRanking() {
+    window.renderProjectRanking = function() {
       const map = new Map();
-      window.parsedSheetsData.forEach(s => s.rows.forEach(r => {
-        if (r.mode === "valid" || r.mode === "ot") {
-          let name = r.task.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-          map.set(name, (map.get(name) || 0) + r.hours);
-        }
-      }));
+      if(window.parsedSheetsData) {
+          window.parsedSheetsData.forEach(s => {
+            if(s.rows) {
+                s.rows.forEach(r => {
+                  if (r.mode === "valid" || r.mode === "ot") {
+                    let taskStr = r.task ? String(r.task) : "";
+                    let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+                    let hrs = parseFloat(r.hours) || 0;
+                    map.set(name, (map.get(name) || 0) + hrs);
+                  }
+                });
+            }
+          });
+      }
+      
       const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      document.getElementById("projectRankList").innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
+      const rankListEl = document.getElementById("projectRankList");
+      
+      if(sorted.length === 0) {
+          rankListEl.innerHTML = '<div class="text-slate-400 text-[11px] py-2">無專案工時資料</div>';
+      } else {
+          rankListEl.innerHTML = sorted.map(([name, hrs], idx) => `<div class="flex justify-between font-bold text-slate-600 border-b border-slate-100 pb-1"><span class="truncate pr-2">${idx + 1}. ${name}</span> <span class="text-blue-600 shrink-0">${hrs} h</span></div>`).join("");
+      }
     }
 
     window.generateAiDraft = async function() {
-      if (window.parsedSheetsData.length === 0) return alert("請先上傳工時紀錄！");
+      if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) return alert("請先上傳工時紀錄！");
       
       const btn = document.getElementById('aiDraftBtn');
       const originalText = btn.innerHTML;
@@ -614,19 +725,25 @@
                 const configDoc = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDB, "config", "system"));
                 if (configDoc.exists()) apiKey = configDoc.data().gemini;
             } catch (e) {
-                console.log("從資料庫讀取金鑰發生錯誤 (可能為權限設定阻擋): ", e);
+                console.log("讀取金鑰發生錯誤: ", e);
             }
         }
         
-        if (!apiKey) throw new Error("無法讀取到 Gemini 金鑰！請確保 Firebase 中的 config/system 已建立 gemini 欄位，且您的資料庫測試模式仍有效。");
+        if (!apiKey) throw new Error("無法讀取到 Gemini 金鑰！請確保 Firebase 中的 config/system 已建立 gemini 欄位。");
 
         const projectMap = new Map();
-        window.parsedSheetsData.forEach(s => s.rows.forEach(r => {
-          if (r.mode === "valid" || r.mode === "ot") {
-            let name = r.task.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-            projectMap.set(name, (projectMap.get(name) || 0) + r.hours);
-          }
-        }));
+        window.parsedSheetsData.forEach(s => {
+            if(s.rows) {
+                s.rows.forEach(r => {
+                  if (r.mode === "valid" || r.mode === "ot") {
+                    let taskStr = r.task ? String(r.task) : "";
+                    let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
+                    let hrs = parseFloat(r.hours) || 0;
+                    projectMap.set(name, (projectMap.get(name) || 0) + hrs);
+                  }
+                });
+            }
+        });
         const projectSummary = Array.from(projectMap.entries()).map(([k, v]) => `- ${k}: ${v}小時`).join("\n");
         const prompt = `你是一個專業的 UI/UX 與平面設計師，正在撰寫每月 KPI 績效報告。以下是我這個月的專案與工時明細：\n${projectSummary}\n\n請幫我生成以下三個欄位的內容，必須符合繁體中文職場正式用語，並精準對應：\n1. J6 (專案執行效益)：挑選前 3 大高工時專案，具體描述交付成果與量化效益（分 3 點，每點以換行區隔，開頭不要有數字編號）。\n2. J10 (客戶/主管滿意度)：以向上管理、急件交付、修改配合度思考，舉例 3 項具體案例（分 3 點）。\n3. J11 (團隊滿意度)：以跨部門協作、會議、內訓與紀律思考，舉例 3 項具體案例（分 3 點）。\n\n請嚴格回傳 JSON 格式：{"j6": "...", "j10": "...", "j11": "..."}`;
 
@@ -640,6 +757,8 @@
         document.getElementById('cellJ6Input').value = resJson.j6 || "";
         document.getElementById('cellJ10Input').value = resJson.j10 || "";
         document.getElementById('cellJ11Input').value = resJson.j11 || "";
+        
+        window.autoSaveText(); // 生成後自動更新到記憶體
         alert("✨ AI 草稿生成完畢！");
       } catch (err) { 
         alert("AI 生成失敗：" + err.message); 
@@ -651,20 +770,23 @@
     window.handleKpiTemplateUpload = function(event) {
       const file = event.target.files[0];
       if (!file) return;
+      window.kpiTemplateFileName = file.name;
       const reader = new FileReader();
       reader.onload = function(e) {
-        kpiTemplateArrayBuffer = e.target.result;
-        document.getElementById("templateStatusBadge").className = "text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold";
-        document.getElementById("templateStatusBadge").textContent = "✅ 已就緒";
+        window.kpiTemplateArrayBuffer = e.target.result;
+        window.kpiTemplateBase64 = window.arrayBufferToBase64(e.target.result);
+        const b2 = document.getElementById("templateStatusBadge");
+        b2.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold truncate max-w-[180px]";
+        b2.textContent = "✅ " + file.name;
       };
       reader.readAsArrayBuffer(file);
     }
 
     window.exportFilledKpiWorkbook = async function() {
-      if (!kpiTemplateArrayBuffer) return alert("請先上傳 KPI 範本 Excel！");
+      if (!window.kpiTemplateArrayBuffer) return alert("請先上傳 KPI 範本 Excel！");
       try {
         const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(kpiTemplateArrayBuffer);
+        await workbook.xlsx.load(window.kpiTemplateArrayBuffer);
         const sourceSheet = workbook.worksheets[workbook.worksheets.length - 1];
         const newSheetName = document.getElementById("newSheetNameInput").value.trim();
         const isCrossYear = document.getElementById("crossYearReset").checked;
@@ -718,11 +840,6 @@
         URL.revokeObjectURL(url);
       } catch (err) { alert("匯出發生錯誤：" + err.message); }
     }
-
-    window.onload = function() {
-      initYearSelect();
-      onDateSelectChange();
-    };
   </script>
 </body>
 </html>
