@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每月工時 & KPI 自動填表系統 (本地模板版)</title>
+  <title>每月工時 & KPI 自動填表系統 (本地智慧造句版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
@@ -28,7 +28,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter">KPI</div>
         <div>
           <h1 class="text-lg font-bold tracking-wide">工時防呆檢核 & KPI 自動填表</h1>
-          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v5.0 (穩定脫機版)</p>
+          <p class="text-[11px] text-slate-400">Google 帳號獨立雲端版 v5.1 (本地智慧造句版)</p>
         </div>
       </div>
       
@@ -164,8 +164,8 @@
         <div class="flex items-center gap-3">
           <label class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded cursor-pointer"><input type="checkbox" id="crossYearReset" class="mr-1"> 跨年新開總表</label>
           <input type="text" id="newSheetNameInput" class="text-[11px] px-2 py-1 rounded border border-slate-300 w-24 text-center" placeholder="頁籤名稱">
-          <button id="aiDraftBtn" onclick="generateLocalDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
-            ⚡ 重新帶入預設草稿
+          <button id="aiDraftBtn" onclick="generateAllDrafts(false)" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-2">
+            ⚡ 全部重新產生草稿
           </button>
         </div>
       </div>
@@ -189,15 +189,26 @@
           </div>
 
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
-            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J6 專案執行效益</label>
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-[11px] font-extrabold text-slate-700">📌 J6 專案執行效益</label>
+                <button type="button" onclick="regenerateJ6()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+            </div>
             <textarea id="cellJ6Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none placeholder-slate-300" placeholder="系統將自動擷取排行前三名專案填入..."></textarea>
           </div>
+          
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
-            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J10 客戶 / 主管滿意度</label>
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-[11px] font-extrabold text-slate-700">📌 J10 客戶 / 主管滿意度</label>
+                <button type="button" onclick="regenerateJ10()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+            </div>
             <textarea id="cellJ10Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
+          
           <div class="border border-slate-200 rounded-xl p-3 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-1">
-            <label class="block text-[11px] font-extrabold text-slate-700 mb-1">📌 J11 團隊滿意度</label>
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-[11px] font-extrabold text-slate-700">📌 J11 團隊滿意度</label>
+                <button type="button" onclick="regenerateJ11()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition">🔄 換個說法</button>
+            </div>
             <textarea id="cellJ11Input" oninput="autoSaveText()" rows="3" class="w-full border-none p-0 text-[11px] text-slate-800 outline-none resize-none"></textarea>
           </div>
           <input type="hidden" id="cellH4Input">
@@ -534,13 +545,40 @@
       window.recalculateAndRenderAll();
     }
 
-    // 本地自動生成草稿邏輯 (完全取代 AI)
-    window.generateLocalDraft = function(isSilent = false) {
-        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
-            if(!isSilent) alert("請先上傳工時紀錄！");
-            return;
-        }
+    // --- 本地智慧字庫與獨立重整功能 ---
+    const j6Templates = [
+        "投入「{p}」專案執行，如期交付階段性任務，確保專案進度與品質。",
+        "針對「{p}」進行視覺與體驗優化，有效提升設計產出效益。",
+        "參與「{p}」專案製作，與團隊密切配合達成專案既定目標。",
+        "高效完成「{p}」相關設計需求，確保最終產出符合規格與期待。",
+        "負責「{p}」專案之設計落地，兼顧時效性與整體視覺完整度。"
+    ];
+    
+    const j10Templates = [
+        "即時回應主管交辦之急件與設計需求，並於時限內高品質交付。",
+        "配合專案需求進行彈性調整，展現高度配合度。",
+        "主動回報專案進度與潛在問題，確保資訊同步。",
+        "確實達成主管交辦之各項設計任務，確保產出符合預期品質。",
+        "積極溝通並釐清需求細節，減少來回修改的時間成本。",
+        "在遇到排程衝突時能主動協調，確保高優先級任務順利過關。"
+    ];
+    
+    const j11Templates = [
+        "積極與跨部門團隊進行協作溝通，確保各項專案順利落地執行。",
+        "參與部門會議並分享設計實務經驗，促進團隊學習成長。",
+        "嚴守團隊紀律，落實工時填報與個人專案進度管理。",
+        "配合團隊運作節奏，適時支援同事處理專案設計瓶頸。",
+        "遵循公司規範與工作流程，確保跨部門檔案交接順暢。",
+        "主動維持良好的工作溝通與互動，營造正向的團隊氛圍。"
+    ];
 
+    function getRandomThree(arr) {
+        let shuffled = [...arr].sort(() => 0.5 - Math.random());
+        return `1. ${shuffled[0]}\n2. ${shuffled[1]}\n3.${shuffled[2]}`;
+    }
+
+    window.regenerateJ6 = function() {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) return;
         const map = new Map();
         window.parsedSheetsData.forEach(s => {
             if(s.rows) {
@@ -548,32 +586,43 @@
                     if (r.mode === "valid" || r.mode === "ot") {
                         let taskStr = r.task ? String(r.task) : "";
                         let name = taskStr.replace(/^(報加班|加班-|加班)/, "").trim() || "一般支援";
-                        let hrs = parseFloat(r.hours) || 0;
-                        map.set(name, (map.get(name) || 0) + hrs);
+                        map.set(name, (map.get(name) || 0) + parseFloat(r.hours || 0));
                     }
                 });
             }
         });
-
-        // 抓取前三名專案
         const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        let j6Lines = [];
+        let lines = [];
         if (sorted.length > 0) {
-            sorted.forEach(([name, hrs], index) => {
-                j6Lines.push(`${index + 1}. 投入「${name}」專案設計與執行，如期交付階段性任務，確保專案進度與品質。`);
+            sorted.forEach(([name, hrs], idx) => {
+                let tmpl = j6Templates[Math.floor(Math.random() * j6Templates.length)];
+                lines.push(`${idx + 1}.${tmpl.replace('{p}', name)}`);
             });
         } else {
-            j6Lines.push("1. 如期完成本月各項常態性任務與設計支援，確保部門業務順利運作。");
+            lines.push("1. 穩定交付本月各項常態性任務與設計支援，維持部門業務順利運作。");
         }
-
-        const j10Text = "1. 即時回應主管交辦之急件與設計需求，並於時限內高品質交付。\n2. 配合專案需求進行彈性調整，展現高度配合度。\n3. 主動回報專案進度與潛在問題，確保資訊同步。";
-        const j11Text = "1. 積極與跨部門團隊進行協作溝通，確保各項專案順利落地執行。\n2. 參與部門會議並分享設計實務經驗，促進團隊學習成長。\n3. 嚴守團隊紀律，落實工時填報與個人專案進度管理。";
-
-        document.getElementById('cellJ6Input').value = j6Lines.join("\n");
-        document.getElementById('cellJ10Input').value = j10Text;
-        document.getElementById('cellJ11Input').value = j11Text;
-
+        document.getElementById('cellJ6Input').value = lines.join("\n");
         window.autoSaveText();
+    }
+
+    window.regenerateJ10 = function() {
+        document.getElementById('cellJ10Input').value = getRandomThree(j10Templates);
+        window.autoSaveText();
+    }
+
+    window.regenerateJ11 = function() {
+        document.getElementById('cellJ11Input').value = getRandomThree(j11Templates);
+        window.autoSaveText();
+    }
+
+    window.generateAllDrafts = function(isSilent = false) {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+            if(!isSilent) alert("請先上傳工時紀錄！");
+            return;
+        }
+        window.regenerateJ6();
+        window.regenerateJ10();
+        window.regenerateJ11();
         
         if(!isSilent) {
             const btn = document.getElementById('aiDraftBtn');
@@ -639,9 +688,9 @@
       try { window.renderDailyTable(); } catch(e) { console.error(e); }
       try { window.renderProjectRanking(); } catch(e) { console.error(e); }
 
-      // 如果草稿區是空的，自動幫使用者填寫！
+      // 如果草稿區是空的，上傳當下會自動帶入第一套說法
       if (!document.getElementById('cellJ6Input').value) {
-          window.generateLocalDraft(true);
+          window.generateAllDrafts(true);
       }
     }
 
