@@ -36,13 +36,13 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v10.1 深色日曆旗艦版</p>
+          <p class="text-[10px] text-blue-400">v10.2 深色日曆旗艦版</p>
         </div>
       </div>
       
       <div class="flex items-center gap-3">
         <button onclick="openDictModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold transition flex items-center gap-1.5 border border-slate-600 text-slate-300 hover:text-white">
-          📚 共用專案庫
+          📚 常用任務庫
         </button>
         <div id="userInfo" class="hidden items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
           <img id="userAvatar" class="w-5 h-5 rounded-full" src="" alt="avatar">
@@ -97,7 +97,7 @@
             <span class="w-8 h-8 rounded-full bg-amber-900/50 text-amber-500 border border-amber-500/30 flex items-center justify-center font-black">2</span> 
             工時日曆大表
             </h2>
-            <button onclick="promptSelectDate()" class="ml-4 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1 border border-blue-400/50 cursor-pointer">
+            <button onclick="openSelectDateModal()" class="ml-4 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1 border border-blue-400/50 cursor-pointer">
                 ➕ 快速新增活動 (選日期)
             </button>
         </div>
@@ -110,6 +110,7 @@
           <div class="flex flex-col items-center"><span class="text-slate-500">休假/無效</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
           <div class="flex flex-col items-center"><span class="text-amber-600/80">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
+          <input type="hidden" id="statH4Score">
         </div>
       </div>
 
@@ -202,17 +203,17 @@
     </section>
   </main>
 
-  <!-- 📚 共用專案字典 Modal -->
+  <!-- 📚 常用任務庫 Modal -->
   <div id="dictModalOverlay" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity">
     <div class="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform" id="dictModalContent">
       <div class="bg-slate-900 px-5 py-3 flex justify-between items-center border-b border-slate-700">
-        <h3 class="font-bold text-sm text-white flex items-center gap-2">📚 跨月共用專案字典庫</h3>
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">📚 跨月常用任務庫</h3>
         <button onclick="closeDictModal()" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
       </div>
       <div class="p-5">
-        <p class="text-[10px] text-slate-400 mb-4">在此新增您的常用專案名稱。未來填寫工時即可使用下拉選單快速選取，免去重複打字。</p>
+        <p class="text-[10px] text-slate-400 mb-4">在此新增常用主任務名稱（例如：上櫃記者會設計物、台中辦公室）。未來填寫工時即可從下拉清單快速選取。</p>
         <div class="flex gap-2 mb-4">
-          <input type="text" id="newDictInput" placeholder="輸入常用專案名稱" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500">
+          <input type="text" id="newDictInput" placeholder="輸入常用主任務名稱" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500">
           <button onclick="addDictItem()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition border border-blue-400/50">新增</button>
         </div>
         <div class="max-h-60 overflow-y-auto border border-slate-700 rounded-lg bg-slate-900/50 p-2">
@@ -222,9 +223,28 @@
     </div>
   </div>
 
+  <!-- 📅 下拉快速選擇日期 Modal -->
+  <div id="dateSelectModalOverlay" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity">
+    <div class="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden transform scale-95 transition-transform" id="dateSelectModalContent">
+      <div class="bg-slate-900 px-5 py-3 flex justify-between items-center border-b border-slate-700">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">📅 選擇編輯日期</h3>
+        <button onclick="closeSelectDateModal()" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 mb-1.5">請選擇當月日期：</label>
+          <select id="quickDaySelect" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none focus:border-blue-500"></select>
+        </div>
+        <button onclick="confirmQuickDateSelect()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition border border-blue-400/50">
+          開啟當日工時抽屜
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 📝 右側編輯抽屜 (Sidebar) -->
   <div id="drawerOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end" onclick="if(event.target===this) closeDrawer()">
-    <div id="editDrawer" class="w-full max-w-sm bg-slate-800 h-full shadow-2xl flex flex-col border-l border-slate-600" onclick="event.stopPropagation()">
+    <div id="editDrawer" class="w-full max-w-md bg-slate-800 h-full shadow-2xl flex flex-col border-l border-slate-600" onclick="event.stopPropagation()">
       <div class="bg-slate-900 border-b border-slate-700 px-5 py-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
         <div>
           <h3 id="drawerTitle" class="font-black text-white text-base">編輯工時</h3>
@@ -515,6 +535,7 @@
       window.recalculateAndRenderAll();
     }
 
+    // --- 常用任務庫 Modal ---
     window.openDictModal = function() {
         renderDictList();
         const o = document.getElementById('dictModalOverlay');
@@ -550,7 +571,7 @@
     function renderDictList() {
         const dl = document.getElementById('dictList');
         if(window.projectDictionary.length === 0) {
-            dl.innerHTML = `<li class="text-[10px] text-slate-500 text-center py-2">尚未建立常用專案</li>`;
+            dl.innerHTML = `<li class="text-[10px] text-slate-500 text-center py-2">尚未建立常用任務</li>`;
         } else {
             dl.innerHTML = window.projectDictionary.map(p => `
                 <li class="flex justify-between items-center bg-slate-800 px-3 py-1.5 rounded border border-slate-700 shadow-sm text-xs font-bold text-slate-300">
@@ -569,24 +590,38 @@
         window.silentSyncToCloud();
     }
 
-    // 🌟 點擊「快速新增活動」時跳出日期選擇框
-    window.promptSelectDate = function() {
-        const month = document.getElementById("monthSelect").value;
+    // --- 下拉選擇日期 Modal ---
+    window.openSelectDateModal = function() {
         const year = document.getElementById("yearSelect").value;
-        const inputDay = prompt(`請輸入您想新增工時的日期（例如：輸入 ${month}月 的幾號，直接輸入數字 1 ~ 31 即可）：`, "1");
-        if (!inputDay) return;
+        const month = document.getElementById("monthSelect").value;
+        const { days } = getDaysInMonthInfo(year, month);
+        const sel = document.getElementById("quickDaySelect");
         
-        const dayNum = parseInt(inputDay.trim(), 10);
-        const daysInMonth = new Date(year, parseInt(month), 0).getDate();
-        
-        if (isNaN(dayNum) || dayNum < 1 || dayNum > daysInMonth) {
-            return alert(`輸入錯誤！${month}月只有 1 到 ${daysInMonth} 天，請重新點擊按鈕輸入正確日期。`);
-        }
-        
-        const mmdd = String(month).padStart(2, '0') + String(dayNum).padStart(2, '0');
-        openDrawer(mmdd);
+        sel.innerHTML = days.map(d => `
+            <option value="${d.mmdd}">${month}月${d.day}日 (${d.dowName}) ${d.isWorkday ? '💼 上班日' : '🏖️ 假日'}</option>
+        `).join("");
+
+        const o = document.getElementById('dateSelectModalOverlay');
+        const c = document.getElementById('dateSelectModalContent');
+        o.classList.remove('hidden');
+        void o.offsetWidth;
+        o.classList.remove('opacity-0');
+        c.classList.remove('scale-95');
+    }
+    window.closeSelectDateModal = function() {
+        const o = document.getElementById('dateSelectModalOverlay');
+        const c = document.getElementById('dateSelectModalContent');
+        o.classList.add('opacity-0');
+        c.classList.add('scale-95');
+        setTimeout(() => o.classList.add('hidden'), 300);
+    }
+    window.confirmQuickDateSelect = function() {
+        const mmdd = document.getElementById("quickDaySelect").value;
+        closeSelectDateModal();
+        if (mmdd) openDrawer(mmdd);
     }
 
+    // --- 側邊抽屜任務編輯 (拆分 主任務 + 活動細項) ---
     window.openDrawer = function(mmdd) {
         window.currentEditingMmdd = mmdd;
         const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
@@ -636,29 +671,47 @@
         
         let html = "";
         dInfo.tasks.forEach((t, idx) => {
+            // 解析既有任務：拆解「主任務」與「活動細項」
+            let mainName = t.task || "";
+            let subActivity = "";
+            const dashMatch = mainName.match(/[-—_]/);
+            if (dashMatch) {
+                const parts = mainName.split(dashMatch[0]);
+                mainName = parts[0].trim();
+                subActivity = parts.slice(1).join(dashMatch[0]).trim();
+            }
+
             html += `
-            <div class="bg-slate-900 p-3 rounded-xl shadow-sm border border-slate-700 relative group transition hover:border-blue-500/50">
+            <div class="bg-slate-900 p-3.5 rounded-xl shadow-sm border border-slate-700 relative group transition hover:border-blue-500/50 space-y-2.5">
                 <button onclick="removeDailyTask('${mmdd}', ${idx})" class="absolute -top-2 -right-2 w-5 h-5 bg-slate-700 text-slate-400 hover:bg-rose-900 hover:text-rose-400 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition shadow border border-slate-600">✕</button>
-                <div class="flex gap-2 mb-2">
-                    <div class="flex-1">
-                        <label class="block text-[9px] text-slate-500 font-bold mb-0.5 uppercase tracking-wider">專案名稱</label>
-                        <input list="projectDictList" value="${t.task}" onchange="updateDailyTaskSilent('${mmdd}', ${idx}, 'task', this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-200 outline-none focus:border-blue-500 transition shadow-inner" placeholder="下拉選取或輸入...">
+                
+                <div class="grid grid-cols-12 gap-2">
+                    <div class="col-span-6">
+                        <label class="block text-[9px] text-slate-400 font-bold mb-0.5">主任務名稱 (可下拉)</label>
+                        <input list="projectDictList" value="${mainName}" onchange="updateCompoundTask('${mmdd}', ${idx}, this.value, null)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-500 transition shadow-inner" placeholder="選取或填寫任務...">
                     </div>
-                    <div class="w-16">
-                        <label class="block text-[9px] text-slate-500 font-bold mb-0.5 uppercase tracking-wider">時數</label>
+                    <div class="col-span-4">
+                        <label class="block text-[9px] text-slate-400 font-bold mb-0.5">活動 / 細項名稱</label>
+                        <input type="text" value="${subActivity}" onchange="updateCompoundTask('${mmdd}', ${idx}, null, this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-slate-200 outline-none focus:border-blue-500 transition shadow-inner" placeholder="如: 背板重做...">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[9px] text-slate-400 font-bold mb-0.5 text-center">時數</label>
                         <input type="number" step="0.5" value="${t.hours}" onchange="updateDailyTaskSilent('${mmdd}', ${idx}, 'hours', this.value)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-black text-center text-blue-400 outline-none focus:border-blue-500 transition shadow-inner">
                     </div>
                 </div>
-                <div class="flex gap-1">
-                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'valid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='valid' ? 'bg-emerald-900/50 border-emerald-500/50 text-emerald-400 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">有效</button>
-                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'ot')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='ot' ? 'bg-blue-900/50 border-blue-500/50 text-blue-400 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">加班</button>
-                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'leave')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='leave' ? 'bg-rose-900/50 border-rose-500/50 text-rose-400 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">休假</button>
-                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'invalid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='invalid' ? 'bg-amber-900/50 border-amber-500/50 text-amber-500 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">訓練/無效</button>
+
+                <!-- 5 類獨立按鈕 (新增無效項目) -->
+                <div class="flex gap-1 pt-1">
+                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'valid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='valid' ? 'bg-emerald-900/60 border-emerald-400 text-emerald-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">有效</button>
+                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'ot')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='ot' ? 'bg-blue-900/60 border-blue-400 text-blue-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">加班</button>
+                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'invalid')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='invalid' ? 'bg-amber-900/60 border-amber-400 text-amber-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">無效</button>
+                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'leave')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='leave' ? 'bg-rose-900/60 border-rose-400 text-rose-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">休假</button>
+                    <button onclick="setTaskMode('${mmdd}', ${idx}, 'exclude')" class="flex-1 py-1 rounded text-[10px] font-bold transition border ${t.mode==='exclude' ? 'bg-purple-900/60 border-purple-400 text-purple-300 shadow-inner scale-95':'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}">訓練/課程</button>
                 </div>
             </div>`;
         });
         
-        html += `<button onclick="addDailyTask('${mmdd}')" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-600 bg-slate-800/50 text-slate-400 text-xs font-bold hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 transition flex items-center justify-center gap-2"><span>＋</span> 新增任務</button>`;
+        html += `<button onclick="addDailyTask('${mmdd}')" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-600 bg-slate-800/50 text-slate-400 text-xs font-bold hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 transition flex items-center justify-center gap-2"><span>＋</span> 新增任務項目</button>`;
         
         listEl.innerHTML = html;
         document.getElementById('drawerTotalHours').innerText = dInfo.total;
@@ -670,6 +723,30 @@
             document.getElementById('drawerTotalHours').classList.remove('text-rose-400');
             document.getElementById('drawerTotalHours').classList.add('text-slate-100');
         }
+    }
+
+    // 同步合成「主任務-活動名稱」字串
+    window.updateCompoundTask = function(mmdd, index, newMain, newSub) {
+        if (!window.manualOverrides[mmdd]) {
+            const dInfo = window.getComputedMonthData().computedDays.find(c => c.mmdd === mmdd);
+            window.manualOverrides[mmdd] = dInfo.tasks.map(t => ({...t}));
+        }
+        const curTask = window.manualOverrides[mmdd][index].task || "";
+        let curMain = curTask;
+        let curSub = "";
+        const dashMatch = curTask.match(/[-—_]/);
+        if (dashMatch) {
+            const parts = curTask.split(dashMatch[0]);
+            curMain = parts[0].trim();
+            curSub = parts.slice(1).join(dashMatch[0]).trim();
+        }
+
+        const finalMain = (newMain !== null ? newMain : curMain).trim();
+        const finalSub = (newSub !== null ? newSub : curSub).trim();
+
+        window.manualOverrides[mmdd][index].task = finalSub ? `${finalMain}-${finalSub}` : finalMain;
+        renderDrawerTasks(mmdd);
+        window.debounceAutoSaveCloudData();
     }
 
     window.updateDailyTaskSilent = function(mmdd, index, field, value) {
@@ -707,7 +784,7 @@
         window.debounceAutoSaveCloudData();
     }
 
-    // 🌟 確保空白月份也能正確渲染 1 到 n 天的格子
+    // --- 月曆完整繪製 ---
     function renderBigCalendar(daysInfo, computedDays) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -918,6 +995,7 @@
         return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, projectMap, allTasksMap };
     }
 
+    // 🌟 修正計算邏輯，確保即使未設定 statH4Score 也能平穩執行完畢
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
         const stdBaseHours = data.daysInfo.totalWorkdays * 8;
@@ -934,7 +1012,9 @@
 
         document.getElementById("statEffectiveHours").innerHTML = `${effectiveHours}<span class="text-xs font-normal">h</span>`;
         document.getElementById("statJ4Percent").textContent = `${j4Percent.toFixed(1)}%`;
-        document.getElementById("statH4Score").textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
+        
+        const statH4El = document.getElementById("statH4Score");
+        if (statH4El) statH4El.textContent = `${h4Score === 120 ? 120 : j4Percent.toFixed(1)}`;
 
         document.getElementById("cellH4Input").value = h4Score === 120 ? 120 : Math.round(j4Percent);
         const j4FormulaParts = `${data.daysInfo.totalWorkdays}x8` + (data.totalOt > 0 ? `+${data.totalOt}` : "") + (data.totalInvalid > 0 ? `-${data.totalInvalid}` : "") + (data.totalLeave > 0 ? `-${data.totalLeave}` : "");
