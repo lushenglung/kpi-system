@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.1 跨裝置同步修復版</p>
+          <p class="text-[10px] text-blue-400">v11.2 累加統計與拖曳歸類版</p>
         </div>
       </div>
       
@@ -148,7 +148,12 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-col shadow-inner">
           <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
-            <h3 class="text-xs font-extrabold text-slate-300">📊 當月專案總覽 (可拖曳整理)</h3>
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs font-extrabold text-slate-300">📊 當月專案總覽</h3>
+              <button onclick="recalculateAndRenderAll()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs" title="重新抓取日曆資料">
+                🔄
+              </button>
+            </div>
             <span class="text-[9px] text-slate-500">按住手把可拖進專案合併</span>
           </div>
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto pr-2"></div>
@@ -387,7 +392,6 @@
       }
     }
 
-    // 🌟 修復核心：安全呼叫 Firestore setDoc
     window.silentSyncToCloud = async function() {
         if (!window.currentUser || !window.firebaseDB || !window.firebaseDoc || !window.firebaseSetDoc) return;
         window.autoSaveCloudData();
@@ -1085,7 +1089,6 @@
         
         resetSourceTags();
         window.recalculateAndRenderAll();
-        // 🌟 匯入成功後立即背景自動備份
         window.silentSyncToCloud();
       };
       reader.readAsArrayBuffer(file);
@@ -1146,7 +1149,6 @@
         const stdBaseHours = data.daysInfo.totalWorkdays * 8;
         const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
-        // 純累加：實填有效工時 + 實填加班
         const actualEffectiveHours = data.totalValid + data.totalOt;
         const actualLeaveInvalid = data.totalLeave + data.totalInvalid + data.totalExclude;
         const j4Percent = targetHours > 0 ? (actualEffectiveHours / targetHours) * 100 : 0;
