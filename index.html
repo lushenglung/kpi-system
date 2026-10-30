@@ -24,7 +24,7 @@
     .drawer-closed #drawerOverlay { opacity: 0; pointer-events: none; }
     .drawer-closed #editDrawer { transform: translateX(100%); }
     
-    .drag-target-hover { outline: 2px dashed #38bdf8 !important; background-color: rgba(56, 189, 248, 0.1) !important; }
+    .drag-target-hover { outline: 2px dashed #38bdf8 !important; background-color: rgba(56, 189, 248, 0.15) !important; }
     input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.3 智慧合併與明細公式版</p>
+          <p class="text-[10px] text-blue-400">v11.4 任務全拖曳整合版</p>
         </div>
       </div>
       
@@ -150,12 +150,12 @@
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-col shadow-inner">
           <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
             <div class="flex items-center gap-2">
-              <h3 class="text-xs font-extrabold text-slate-300">📊 當月專案總覽 (智慧合併)</h3>
+              <h3 class="text-xs font-extrabold text-slate-300">📊 當月任務總覽 (智慧合併)</h3>
               <button onclick="recalculateAndRenderAll()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs" title="重新抓取日曆資料">
                 🔄
               </button>
             </div>
-            <span class="text-[9px] text-slate-500">可拖曳合併同專案</span>
+            <span class="text-[9px] text-slate-500">可拖曳整項任務或活動進行合併</span>
           </div>
           <div id="projectRankList" class="space-y-2 text-[11px] flex-1 overflow-y-auto pr-2"></div>
         </div>
@@ -175,11 +175,11 @@
           <div class="border border-slate-700 rounded-xl p-3 bg-slate-900 shadow-inner focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition">
             <div class="flex justify-between items-center mb-1.5">
                 <label class="text-[11px] font-extrabold text-emerald-400 flex items-center">
-                    📌 J6 專案執行效益 <span id="j6Source"></span>
+                    📌 J6 任務執行效益 <span id="j6Source"></span>
                 </label>
                 <button type="button" onclick="regenerateSingle('j6')" class="text-[10px] text-blue-400 hover:text-white font-bold bg-slate-800 border border-slate-600 px-2 py-0.5 rounded transition">🔄 換個說法</button>
             </div>
-            <textarea id="cellJ6Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="整理好專案後，點選上方「雙引擎自動生成」或於此手動編輯..."></textarea>
+            <textarea id="cellJ6Input" oninput="debounceAutoSaveCloudData()" rows="3" class="w-full border-none p-1 text-[11px] font-medium text-slate-200 bg-transparent outline-none resize-none placeholder-slate-600 leading-relaxed" placeholder="整理好任務後，點選上方「雙引擎自動生成」或於此手動編輯..."></textarea>
           </div>
           
           <div class="border border-slate-700 rounded-xl p-3 bg-slate-900 shadow-inner focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition">
@@ -440,7 +440,8 @@
     window.projectDictionary = [];
     window.currentEditingMmdd = null;
     window.activeYm = ""; 
-    window.currentDraggingTask = null;
+    window.currentDraggingType = null; // 'task' (細項活動) 或 'main' (整個主任務)
+    window.currentDraggingValue = null;
     window.targetReassignTask = null;
 
     let saveTimeout = null;
@@ -722,10 +723,34 @@
         window.silentSyncToCloud();
     }
 
-    // --- 拖曳歸類 (Drag & Drop) ---
-    window.handleDragStart = function(e, taskName) {
-        window.currentDraggingTask = taskName;
-        e.dataTransfer.setData("text/plain", taskName);
+    // 全局套用整項「主任務」整組轉移至另一主任務
+    function applyMainTaskMergeAcrossMonth(sourceMainName, targetMainName) {
+        const data = window.getComputedMonthData();
+        data.computedDays.forEach(c => {
+            let modified = false;
+            c.tasks.forEach(t => {
+                let rawName = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
+                const { main, sub } = parseTaskCompound(rawName);
+                if (main === sourceMainName) {
+                    const finalSub = sub ? `${sourceMainName}_${sub}` : sourceMainName;
+                    t.task = `${targetMainName}-${finalSub}`;
+                    modified = true;
+                }
+            });
+            if (modified) {
+                if (!window.manualOverrides) window.manualOverrides = {};
+                window.manualOverrides[c.mmdd] = c.tasks;
+            }
+        });
+        window.recalculateAndRenderAll();
+        window.silentSyncToCloud();
+    }
+
+    // --- 🌟 支援「整項主任務」或「個別活動」拖曳歸類 ---
+    window.handleDragStart = function(e, type, value) {
+        window.currentDraggingType = type; // 'task' or 'main'
+        window.currentDraggingValue = value;
+        e.dataTransfer.setData("text/plain", JSON.stringify({ type, value }));
         e.dataTransfer.effectAllowed = "move";
     }
     window.handleDragOver = function(e) {
@@ -739,13 +764,33 @@
     window.handleDrop = function(e, targetMainName) {
         e.preventDefault();
         e.currentTarget.classList.remove("drag-target-hover");
-        const draggedTask = window.currentDraggingTask || e.dataTransfer.getData("text/plain");
-        if (!draggedTask || draggedTask === targetMainName) return;
+        
+        let dragType = window.currentDraggingType;
+        let dragVal = window.currentDraggingValue;
 
-        const { sub } = parseTaskCompound(draggedTask);
-        const newSub = sub || draggedTask;
-        const newFullName = `${targetMainName}-${newSub}`;
-        applyTaskRenameAcrossMonth(draggedTask, newFullName);
+        if (!dragVal) {
+            try {
+                const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+                dragType = data.type;
+                dragVal = data.value;
+            } catch(err) {
+                dragVal = e.dataTransfer.getData("text/plain");
+                dragType = 'task';
+            }
+        }
+
+        if (!dragVal || dragVal === targetMainName) return;
+
+        if (dragType === 'main') {
+            // 拖曳整條主任務進目標主任務
+            applyMainTaskMergeAcrossMonth(dragVal, targetMainName);
+        } else {
+            // 拖曳單一活動細項進目標主任務
+            const { sub } = parseTaskCompound(dragVal);
+            const newSub = sub || dragVal;
+            const newFullName = `${targetMainName}-${newSub}`;
+            applyTaskRenameAcrossMonth(dragVal, newFullName);
+        }
     }
 
     // --- 側邊抽屜任務編輯 ---
@@ -791,7 +836,7 @@
         window.debounceAutoSaveCloudData();
     }
 
-    // 🌟 智慧符號切割器：擴充支援冒號 : / ：/ 破折號 / 斜線
+    // 🌟 智慧符號切割器：支援冒號 : / ：/ 破折號 / 斜線
     function parseTaskCompound(rawName) {
         if (!rawName) return { main: "", sub: "" };
         const match = rawName.match(/[-—_：:]/);
@@ -821,7 +866,7 @@
                 <div class="grid grid-cols-12 gap-2">
                     <div class="col-span-6">
                         <label class="block text-[9px] text-slate-400 font-bold mb-0.5">主任務名稱 (可下拉)</label>
-                        <input list="projectDictList" value="${mainName}" oninput="updateCompoundTaskSilent('${mmdd}', ${idx}, this.value, null)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-500 transition shadow-inner" placeholder="選取或填寫任務...">
+                        <input list="projectDictList" value="${mainName}" oninput="updateCompoundTaskSilent('${mmdd}', ${idx}, this.value, null)" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-xs font-bold text-slate-100 outline-none focus:border-blue-500 transition shadow-inner" placeholder="選取或填寫主任務...">
                     </div>
                     <div class="col-span-4">
                         <label class="block text-[9px] text-slate-400 font-bold mb-0.5">活動 / 細項名稱</label>
@@ -996,7 +1041,7 @@
         grid.innerHTML = html;
     }
 
-    // 🌟 方式 A：颱風假／天災假日期狀態微調
+    // 🌟 颱風假／天災假日期狀態微調
     window.toggleDayStatus = function(mmdd, currentIsWorkday) {
       const year = document.getElementById("yearSelect").value;
       const month = document.getElementById("monthSelect").value;
@@ -1035,6 +1080,7 @@
         window.cloudData.monthly[window.activeYm].manualOverrides = window.manualOverrides;
     }
 
+    // 🌟 Excel 上傳解析：加入「剩餘時間 (D欄)」自動相容備援
     window.handleWorklogUpload = function(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1053,7 +1099,11 @@
             const row = rowsAoA[r];
             if (!row) continue;
             let task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
-            let hours = row[2] !== undefined && row[2] !== null && row[2] !== "" ? parseFloat(row[2]) : 0;
+            
+            // 🌟 優先抓取 C 欄 (row[2])，若無則備援抓取 D 欄 (row[3])
+            let rawHours = (row[2] !== undefined && row[2] !== null && row[2] !== "") ? row[2] : row[3];
+            let hours = (rawHours !== undefined && rawHours !== null && rawHours !== "") ? parseFloat(rawHours) : 0;
+            
             let validFlag = row[4] !== undefined && row[4] !== null ? String(row[4]).trim() : "";
             let mode = "valid";
             if (task.includes("請假") || task.includes("休假") || task.includes("特休") || task.includes("病假") || task.includes("事假")) mode = "leave";
@@ -1159,7 +1209,6 @@
         const cellH4 = document.getElementById("cellH4Input");
         if (cellH4) cellH4.value = h4Score === 120 ? 120 : Math.round(j4Percent);
         
-        // 2. 詳細列出無效/扣除工時明細清單
         const deductItems = [];
         data.computedDays.forEach(c => {
             c.tasks.forEach(t => {
@@ -1207,12 +1256,12 @@
       }
     }
 
-    // 🌟 3. 智慧分組排行榜 (支援冒號、破折號、別名智慧合併)
+    // 🌟 支援整項「主任務」或「活動細項」的雙層拖曳排行榜
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
         if (!rankListEl) return;
         if (allTasksMap.size === 0) {
-            rankListEl.innerHTML = '<div class="text-slate-500 text-[11px] py-2 text-center border border-dashed border-slate-700 rounded-lg">尚無專案工時資料</div>';
+            rankListEl.innerHTML = '<div class="text-slate-500 text-[11px] py-2 text-center border border-dashed border-slate-700 rounded-lg">尚無任務工時資料</div>';
             return;
         }
 
@@ -1248,7 +1297,7 @@
                 subItemsHtml = `<ul class="mt-2 mb-2 ml-4 space-y-1.5 text-[10px] text-slate-400 border-l border-slate-700 pl-3">`;
                 data.items.sort((a,b) => b.hrs - a.hrs).forEach(item => {
                     subItemsHtml += `
-                        <li draggable="true" ondragstart="handleDragStart(event, '${item.raw}')" class="flex justify-between items-center hover:text-slate-200 transition group/item cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-800/80">
+                        <li draggable="true" ondragstart="handleDragStart(event, 'task', '${item.raw}')" class="flex justify-between items-center hover:text-slate-200 transition group/item cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-800/80">
                             <span class="truncate pr-2 flex items-center gap-1.5">
                                 <span class="text-slate-600 select-none">⋮⋮</span>
                                 <span>${item.name}</span>
@@ -1262,16 +1311,18 @@
                 subItemsHtml += `</ul>`;
             }
 
+            // 主任務卡片：頂部本身也可拖曳（type='main'），也能接收拖放（ondrop）
             html += `
             <div ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mainName}')" class="border border-slate-800/80 bg-slate-900/40 p-2.5 rounded-xl mb-2 transition">
-                <div class="flex justify-between items-center">
-                    <span class="truncate pr-2 font-extrabold text-xs text-slate-200 flex items-center gap-1.5">
+                <div class="flex justify-between items-center group/main">
+                    <div draggable="true" ondragstart="handleDragStart(event, 'main', '${mainName}')" class="flex items-center gap-1.5 truncate pr-2 cursor-grab active:cursor-grabbing" title="按住手把可將整個主任務拖入另一個主任務合併">
+                        <span class="text-slate-600 group-hover/main:text-blue-400 select-none font-bold">⋮⋮</span>
                         <span class="text-slate-500 text-[10px]">${idx + 1}.</span>
-                        <span>${mainName}</span>
-                    </span> 
+                        <span class="font-extrabold text-xs text-slate-200 truncate">${mainName}</span>
+                    </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <span class="text-blue-400 bg-blue-900/30 border border-blue-800/50 px-2 py-0.5 rounded font-black shadow-sm text-[10px]">${data.totalHrs} h</span>
-                        <button onclick="openReassignModal('${mainName}')" class="text-slate-500 hover:text-blue-400 text-xs transition" title="修改專案名稱">✏️</button>
+                        <button onclick="openReassignModal('${mainName}')" class="text-slate-500 hover:text-blue-400 text-xs transition" title="修改主任務名稱">✏️</button>
                     </div>
                 </div>
                 ${subItemsHtml}
@@ -1302,9 +1353,9 @@
         setSourceTag('j6', ''); setSourceTag('j10', ''); setSourceTag('j11', '');
     }
 
-    const j6Templates = ["高度投入 {h} 小時於「{p}」專案執行，如期交付階段性任務，確保進度與品質。", "針對「{p}」專案挹注 {h} 小時進行設計與體驗優化，有效提升產出效益。", "主力參與「{p}」專案製作，耗時 {h} 小時與團隊密切配合達成目標。", "高效完成「{p}」相關設計需求（共計 {h} 小時），確保最終產出符合期待。", "負責「{p}」專案之設計落地（投入 {h} 小時），兼顧時效性與視覺完整度。"];
+    const j6Templates = ["高度投入 {h} 小時於「{p}」任務執行，如期交付階段性產出，確保進度與品質。", "針對「{p}」任務挹注 {h} 小時進行設計與體驗優化，有效提升產出效益。", "主力參與「{p}」任務製作，耗時 {h} 小時與團隊密切配合達成目標。", "高效完成「{p}」相關設計需求（共計 {h} 小時），確保最終產出符合期待。", "負責「{p}」任務之設計落地（投入 {h} 小時），兼顧時效性與視覺完整度。"];
     const j10Templates = ["即時回應主管交辦之設計需求，於本月 {valid} 小時有效工時內皆維持高品質產出。", "積極溝通釐清需求細節，減少來回修改的時間成本，深獲肯定。", "確實達成主管交辦之各項任務，產出符合預期品質。"];
-    const j11Templates = ["嚴守團隊紀律，本月維持 {valid} 小時的穩定出勤，落實工時填報與專案進度管理。", "積極與跨部門團隊進行協作溝通，確保各項專案順利落地。", "參與會議並分享實務經驗，促進團隊學習與正向氛圍。"];
+    const j11Templates = ["嚴守團隊紀律，本月維持 {valid} 小時的穩定出勤，落實工時填報與任務進度管理。", "積極與跨部門團隊進行協作溝通，確保各項任務順利落地。", "參與會議並分享實務經驗，促進團隊學習與正向氛圍。"];
 
     function getLocalText(type, topProjObjs, validH, otH) {
         let shuffled = (arr) => [...arr].sort(() => 0.5 - Math.random());
@@ -1319,13 +1370,13 @@
         }
         if (type === 'j10') {
             let pool = [...j10Templates];
-            if (otH > 0) pool.push(`本月配合專案需求彈性調整，支援 ${otH} 小時加班，確保急件與設計需求高品質交付。`);
+            if (otH > 0) pool.push(`本月配合任務需求彈性調整，支援 ${otH} 小時加班，確保急件與設計需求高品質交付。`);
             let s = shuffled(pool);
             return `1. ${s[0].replace('{valid}', validH)}\n2. ${s[1].replace('{valid}', validH)}\n3. ${s[2].replace('{valid}', validH)}`;
         }
         if (type === 'j11') {
             let pool = [...j11Templates];
-            if (otH > 0) pool.push(`配合團隊運作節奏，適時加班支援同事處理專案設計瓶頸。`);
+            if (otH > 0) pool.push(`配合團隊運作節奏，適時加班支援同事處理任務設計瓶頸。`);
             let s = shuffled(pool);
             return `1. ${s[0].replace('{valid}', validH)}\n2. ${s[1].replace('{valid}', validH)}\n3. ${s[2].replace('{valid}', validH)}`;
         }
@@ -1349,7 +1400,7 @@
         return JSON.parse(rawText);
     }
 
-    // 🌟 整合去重的前三大專案提取
+    // 🌟 整合去重的前三大主任務提取
     function getConsolidatedTopProjects(projectMap) {
         const consolidated = {};
         Array.from(projectMap.entries()).forEach(([rawName, hrs]) => {
@@ -1370,7 +1421,7 @@
         setSourceTag(field, 'loading');
         
         let prompt = "";
-        if (field === 'j6') prompt = `為 UI/UX 設計師撰寫 KPI 中 J6(專案執行效益)，針對以下整合後的核心專案與總時數：${pSum}。請描述產出與效益(分3點)，並務必在句子中自然帶入該專案的「實際時數」以增加可信度，且絕不重複相同專案。回傳 JSON: {"j6": "..."}`;
+        if (field === 'j6') prompt = `為 UI/UX 設計師撰寫 KPI 中 J6(任務執行效益)，針對以下整合後的核心主任務與總時數：${pSum}。請描述產出與效益(分3點)，並務必在句子中自然帶入該任務的「實際時數」以增加可信度，且絕不重複相同任務名稱。回傳 JSON: {"j6": "..."}`;
         if (field === 'j10') prompt = `為 UI/UX 設計師撰寫 KPI 中 J10(主管滿意度)，描述配合度與溝通(分3點)。本月實填有效工時 ${data.totalValid}小時、加班 ${data.totalOt}小時，若有加班請於其中一點提及加班時數。回傳 JSON: {"j10": "..."}`;
         if (field === 'j11') prompt = `為 UI/UX 設計師撰寫 KPI 中 J11(團隊滿意度)，描述團隊協作與紀律(分3點)。本月實填有效工時 ${data.totalValid}小時，請於其中一點提及全月穩定貢獻的總有效工時。回傳 JSON: {"j11": "..."}`;
 
@@ -1399,11 +1450,11 @@
             const prompt = `你是一個專業設計師撰寫 KPI。本月數據如下：
             - 實填有效工時：${data.totalValid} 小時
             - 實填加班工時：${data.totalOt} 小時
-            - 核心專案與投入總時數 (已智慧整合)：
+            - 核心主任務與投入總時數 (已智慧整合)：
             ${pSum}
 
             請生成以下三個欄位(繁體中文, 各3點，不需前綴標題)：
-            1. j6 (專案效益): 針對整合後的專案，務必在句子中自然帶入該專案的「實際時數」(如: 投入 X 小時於...)，增加真實性，不得出現重複專案。
+            1. j6 (任務效益): 針對整合後的任務，務必在句子中自然帶入該任務的「實際時數」(如: 投入 X 小時於...)，增加真實性，不得出現重複任務名稱。
             2. j10 (主管滿意度): 描述急件處理與配合度，若有加班請務必提及加班時數。
             3. j11 (團隊滿意度): 描述跨部門溝通與紀律，請提及全月穩定貢獻的實填有效工時。
             回傳 JSON: {"j6": "...", "j10": "...", "j11": "..."}`;
