@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.5 任務拖曳全名稱整合版</p>
+          <p class="text-[10px] text-blue-400">v11.6 法定基準與條列扣除雙向驗算版</p>
         </div>
       </div>
       
@@ -70,8 +70,8 @@
         <select id="monthSelect" onchange="onDateSelectChange()" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-bold text-slate-200 bg-slate-900 outline-none cursor-pointer hover:border-blue-500 transition">
           <option value="01">01 月</option><option value="02">02 月</option><option value="03">03 月</option>
           <option value="04">04 月</option><option value="05">05 月</option><option value="06">06 月</option>
-          <option value="07">07 月</option><option value="08">08 月</option><option value="09" selected>09 月</option>
-          <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+          <option value="07">07 月</option><option value="08">08 月</option><option value="09">09 月</option>
+          <option value="10" selected>10 月</option><option value="11">11 月</option><option value="12">12 月</option>
         </select>
       </div>
 
@@ -103,22 +103,22 @@
             </button>
         </div>
         
-        <!-- 微縮版數據看板 (累加實作式) -->
+        <!-- 微縮版數據看板 (嚴謹雙向驗算) -->
         <div class="flex items-center gap-3 text-[10px] font-bold bg-slate-900 px-4 py-2 rounded-xl border border-slate-700 w-full md:w-auto overflow-x-auto shadow-inner">
-          <div class="flex flex-col items-center"><span class="text-slate-500">標準基準</span><span id="statBaseHours" class="text-sm text-slate-200">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">法定應出勤基準</span><span id="statBaseHours" class="text-sm text-slate-200">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
-          <div class="flex flex-col items-center"><span class="text-slate-500">累計有效+加班</span><span id="statEffectiveHours" class="text-sm text-emerald-400">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">實際有效+加班</span><span id="statEffectiveHours" class="text-sm text-emerald-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
-          <div class="flex flex-col items-center"><span class="text-slate-500">累計休假/無效</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
+          <div class="flex flex-col items-center"><span class="text-slate-500">請假/無效扣除</span><span id="statLeaveHours" class="text-sm text-rose-400">0h</span></div>
           <div class="w-px h-6 bg-slate-700"></div>
           <div class="flex flex-col items-center"><span class="text-amber-500">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
           <input type="hidden" id="statH4Score">
         </div>
       </div>
 
-      <!-- 日期狀態微調盤 (遇颱風假點擊轉為休假) -->
+      <!-- 日期狀態微調盤 (點擊切換上班日 / 颱風假或休假) -->
       <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700 mb-4 flex items-center gap-3 overflow-x-auto">
-        <span class="text-[10px] font-bold text-slate-400 shrink-0">📅 日期狀態微調 (遇颱風假點擊轉為休假)：</span>
+        <span class="text-[10px] font-bold text-slate-400 shrink-0">📅 日期狀態微調 (遇颱風假/災防假點擊轉為休假)：</span>
         <div id="workdayBadges" class="flex flex-wrap gap-1.5"></div>
       </div>
 
@@ -163,12 +163,12 @@
         <div class="lg:col-span-2 space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="border border-orange-900/30 bg-orange-950/20 rounded-xl p-3 shadow-inner">
-              <label class="block text-[11px] font-bold text-orange-400 mb-2">📌 J4 公式 (財務構面 - 條列扣除明細)</label>
-              <textarea id="cellJ4Input" rows="5" class="w-full text-[10px] p-2 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
+              <label class="block text-[11px] font-bold text-orange-400 mb-2">📌 J4 公式 (財務構面 - 法定基準與扣除雙向驗算)</label>
+              <textarea id="cellJ4Input" rows="6" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
             </div>
             <div class="border border-orange-900/30 bg-orange-950/20 rounded-xl p-3 shadow-inner">
               <label class="block text-[11px] font-bold text-orange-400 mb-2">🎓 J14 內外訓 <span class="font-normal text-orange-500/70 ml-1 text-[9px]">(自動抓取訓練任務)</span></label>
-              <textarea id="cellJ14Input" rows="5" class="w-full text-[10px] p-2 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
+              <textarea id="cellJ14Input" rows="6" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
             </div>
           </div>
 
@@ -440,7 +440,7 @@
     window.projectDictionary = [];
     window.currentEditingMmdd = null;
     window.activeYm = ""; 
-    window.currentDraggingType = null; // 'task' (細項活動) 或 'main' (整個主任務)
+    window.currentDraggingType = null;
     window.currentDraggingValue = null;
     window.targetReassignTask = null;
 
@@ -479,7 +479,7 @@
         html += `<option value="${y}" ${y === currentYear ? "selected" : ""}>${y} 年 (民國${y - 1911}年)</option>`;
       }
       yearSelect.innerHTML = html;
-      document.getElementById("monthSelect").value = String(new Date().getMonth() + 1).padStart(2, '0');
+      document.getElementById("monthSelect").value = "10";
       updateSheetNamePreview();
     }
 
@@ -511,6 +511,7 @@
       } catch (e) { return false; }
     }
 
+    // 🌟 精確計算人事行政局上班日、假日、補假與微調
     function getDaysInMonthInfo(year, monthStr) {
       const y = parseInt(year, 10), m = parseInt(monthStr, 10);
       const daysInMonth = new Date(y, m, 0).getDate();
@@ -518,16 +519,21 @@
       const overrides = JSON.parse(localStorage.getItem(`kpi_holidays_${y}_${monthStr}`) || "{}");
       const days = [];
       let totalWorkdays = 0;
+      let totalHolidays = 0;
+
       for (let d = 1; d <= daysInMonth; d++) {
         const dow = new Date(y, m - 1, d).getDay();
         const mmdd = String(monthStr).padStart(2, '0') + String(d).padStart(2, '0');
         let isWorkday = (dow !== 0 && dow !== 6);
         if (overrides[mmdd] === "holiday") isWorkday = false;
         if (overrides[mmdd] === "workday") isWorkday = true;
+        
         if (isWorkday) totalWorkdays++;
-        days.push({ mmdd, day: d, dowName: WEEKDAY_NAMES[dow], dow, isWorkday });
+        else totalHolidays++;
+
+        days.push({ mmdd, day: d, dowName: WEEKDAY_NAMES[dow], dow, isWorkday, isCustomModified: !!overrides[mmdd] });
       }
-      return { days, totalWorkdays, firstDow };
+      return { days, totalWorkdays, totalHolidays, daysInMonth, firstDow };
     }
 
     window.onDateSelectChange = async function() {
@@ -732,7 +738,6 @@
                 let rawName = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
                 const { main, sub } = parseTaskCompound(rawName);
                 if (main === sourceMainName) {
-                    // 若原本有細項活動，組合為「目標任務-來源任務：細項」；若無細項，則直接將來源主任務作為細項
                     const finalSub = sub ? `${sourceMainName}：${sub}` : sourceMainName;
                     t.task = `${targetMainName}-${finalSub}`;
                     modified = true;
@@ -747,9 +752,9 @@
         window.silentSyncToCloud();
     }
 
-    // --- 🌟 支援「整項主任務」或「個別活動」拖曳歸類 ---
+    // --- 支援「整項主任務」或「個別活動」拖曳歸類 ---
     window.handleDragStart = function(e, type, value) {
-        window.currentDraggingType = type; // 'task' or 'main'
+        window.currentDraggingType = type;
         window.currentDraggingValue = value;
         e.dataTransfer.setData("text/plain", JSON.stringify({ type, value }));
         e.dataTransfer.effectAllowed = "move";
@@ -783,10 +788,8 @@
         if (!dragVal || dragVal === targetMainName) return;
 
         if (dragType === 'main') {
-            // 拖曳整條主任務進目標主任務
             applyMainTaskMergeAcrossMonth(dragVal, targetMainName);
         } else {
-            // 拖曳單一活動細項進目標主任務
             const { sub } = parseTaskCompound(dragVal);
             const newSub = sub || dragVal;
             const newFullName = `${targetMainName}-${newSub}`;
@@ -837,7 +840,6 @@
         window.debounceAutoSaveCloudData();
     }
 
-    // 🌟 智慧符號切割器：支援冒號 : / ：/ 破折號 / 斜線
     function parseTaskCompound(rawName) {
         if (!rawName) return { main: "", sub: "" };
         const match = rawName.match(/[-—_：:]/);
@@ -1101,7 +1103,6 @@
             if (!row) continue;
             let task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
             
-            // 優先抓取 C 欄 (row[2])，若無則備援抓取 D 欄 (row[3])
             let rawHours = (row[2] !== undefined && row[2] !== null && row[2] !== "") ? row[2] : row[3];
             let hours = (rawHours !== undefined && rawHours !== null && rawHours !== "") ? parseFloat(rawHours) : 0;
             
@@ -1186,14 +1187,16 @@
         return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, totalExclude, projectMap, allTasksMap };
     }
 
-    // 🌟 方案 A 累加實作式計算 ＋ J4 詳細條列扣除明細
+    // 🌟 法定基準與扣除雙向驗算 J4 公式引擎
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
-        const stdBaseHours = data.daysInfo.totalWorkdays * 8;
-        const targetHours = +(stdBaseHours * 0.8).toFixed(2);
+        const workdays = data.daysInfo.totalWorkdays;
+        const holidays = data.daysInfo.totalHolidays;
+        const stdBaseHours = workdays * 8; // 法定應出勤基準工時
+        const targetHours = +(stdBaseHours * 0.8).toFixed(2); // 80% 考核目標工時
 
-        const actualEffectiveHours = data.totalValid + data.totalOt;
-        const totalDeductHours = data.totalLeave + data.totalInvalid + data.totalExclude;
+        const actualEffectiveHours = data.totalValid + data.totalOt; // 實際有效 + 加班
+        const totalDeductHours = data.totalLeave + data.totalInvalid + data.totalExclude; // 總扣除工時
         const j4Percent = targetHours > 0 ? (actualEffectiveHours / targetHours) * 100 : 0;
         const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
@@ -1210,24 +1213,39 @@
         const cellH4 = document.getElementById("cellH4Input");
         if (cellH4) cellH4.value = h4Score === 120 ? 120 : Math.round(j4Percent);
         
+        // 條列扣除工時明細清單
         const deductItems = [];
         data.computedDays.forEach(c => {
             c.tasks.forEach(t => {
                 if (t.mode === 'leave' || t.mode === 'invalid' || t.mode === 'exclude') {
-                    const tag = t.mode === 'leave' ? '請假' : (t.mode === 'exclude' ? '不列入/內外訓' : '無效工時');
-                    deductItems.push(`• ${parseInt(c.mmdd.slice(0,2),10)}/${c.mmdd.slice(2,4)} ${t.task || '未命名'} [${tag}]: ${t.hours}h`);
+                    const tag = t.mode === 'leave' ? '請假/特休' : (t.mode === 'exclude' ? '不列入' : '無效工時');
+                    deductItems.push(`  • ${parseInt(c.mmdd.slice(0,2),10)}/${c.mmdd.slice(2,4)} ${t.task || '未命名'} [${tag}]: ${t.hours}h`);
                 }
             });
         });
 
-        let deductSection = "【扣除工時明細】：\n• 全月無扣除工時";
+        let deductSection = "  • 全月無請假/無效扣除工時";
         if (deductItems.length > 0) {
-            deductSection = `【扣除工時明細】(共${totalDeductHours}h)：\n` + deductItems.join("\n");
+            deductSection = deductItems.join("\n");
         }
 
+        // 構造嚴謹的雙向驗算 J4 文字公式
         const cellJ4 = document.getElementById("cellJ4Input");
         if (cellJ4) {
-            cellJ4.value = `實際有效工時：${actualEffectiveHours}小時 (實填有效${data.totalValid}h + 加班${data.totalOt}h)\n＝ 標準工時基準 (${data.daysInfo.totalWorkdays}天 x 8h = ${stdBaseHours}h) － 扣除工時 (${totalDeductHours}h)\n\n${deductSection}\n\n最高分數以120分計算。\n(${actualEffectiveHours} / (${data.daysInfo.totalWorkdays} x 8 x 0.8 = ${targetHours})) * 100% = ${j4Percent.toFixed(2)}%`;
+            cellJ4.value = 
+`【出勤基準 (人事行政局)】
+• 本月日數：${data.daysInfo.daysInMonth}天，假日/國定假日/補假/災防假：${holidays}天
+• 法定上班天數：${workdays}天 × 8h ＝ 標準基準 ${stdBaseHours}小時
+• 考核目標工時 (80%)：${stdBaseHours} × 0.8 ＝ ${targetHours}小時
+
+【個人扣除工時明細】(共扣除 ${totalDeductHours}h)：
+${deductSection}
+
+【工時結算與達成率計算】
+• 實際有效工時：${actualEffectiveHours}h (實填有效 ${data.totalValid}h ＋ 加班 ${data.totalOt}h)
+• 雙向驗算：基準 ${stdBaseHours}h ＋ 加班 ${data.totalOt}h － 扣除 ${totalDeductHours}h ＝ ${stdBaseHours + data.totalOt - totalDeductHours}h
+• 財務構面達成率：(${actualEffectiveHours} / ${targetHours}) × 100% ＝ ${j4Percent.toFixed(2)}%
+• 財務構面得分：${h4Score === 120 ? '120分 (滿分上限120分)' : Math.round(j4Percent) + '分'}`;
         }
 
         updateJ14TrainingBox(data.computedDays);
@@ -1257,7 +1275,6 @@
       }
     }
 
-    // 🌟 支援整項「主任務」或「活動細項」的雙層拖曳排行榜 (移除「主體執行」字樣，保留完整名稱)
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
         if (!rankListEl) return;
@@ -1285,7 +1302,6 @@
             if (subTask) {
                 groups[mainTask].items.push({ name: subTask, raw: rawName, hrs: hrs });
             } else {
-                // 🌟 保留原始任務名稱，不寫死為「主體執行」
                 groups[mainTask].items.push({ name: rawName, raw: rawName, hrs: hrs });
             }
         });
@@ -1295,7 +1311,6 @@
         let html = "";
         sortedGroups.forEach(([mainName, data], idx) => {
             let subItemsHtml = "";
-            // 當該主任務底下有多個子項目，或唯一的子項目名稱與主任務不完全相同時，展開次級清單
             const hasDistinctSubs = data.items.length > 1 || (data.items.length === 1 && data.items[0].name !== mainName);
             
             if (hasDistinctSubs) {
@@ -1316,7 +1331,6 @@
                 subItemsHtml += `</ul>`;
             }
 
-            // 主任務卡片：頂部本身也可拖曳（type='main'），也能接收拖放（ondrop）
             html += `
             <div ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mainName}')" class="border border-slate-800/80 bg-slate-900/40 p-2.5 rounded-xl mb-2 transition">
                 <div class="flex justify-between items-center group/main">
@@ -1405,7 +1419,6 @@
         return JSON.parse(rawText);
     }
 
-    // 🌟 整合去重的前三大主任務提取
     function getConsolidatedTopProjects(projectMap) {
         const consolidated = {};
         Array.from(projectMap.entries()).forEach(([rawName, hrs]) => {
