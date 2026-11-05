@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.6 法定基準與條列扣除雙向驗算版</p>
+          <p class="text-[10px] text-blue-400">v11.7 平日未填寫智慧偵測提醒版</p>
         </div>
       </div>
       
@@ -114,6 +114,15 @@
           <div class="flex flex-col items-center"><span class="text-amber-500">J4達成率</span><span id="statJ4Percent" class="text-sm text-amber-500 font-black drop-shadow-md">0%</span></div>
           <input type="hidden" id="statH4Score">
         </div>
+      </div>
+
+      <!-- 未填寫平日高亮警示條 (自動偵測) -->
+      <div id="missingWorkdayBanner" class="hidden mb-4 p-3 rounded-xl bg-amber-950/40 border border-amber-600/50 text-amber-300 text-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-inner">
+        <div class="flex items-center gap-2">
+          <span class="text-base">⚠️</span>
+          <span><strong class="font-black text-amber-200">偵測到完全未填寫之平日：</strong>本月尚有 <span id="missingWorkdayList" class="font-mono font-bold text-amber-400"></span> 未填寫工時。若是颱風假／天災假，請點擊右方按鈕直接轉為免出勤休假：</span>
+        </div>
+        <div id="missingQuickActionBtns" class="flex flex-wrap gap-1.5 shrink-0"></div>
       </div>
 
       <!-- 日期狀態微調盤 (點擊切換上班日 / 颱風假或休假) -->
@@ -511,7 +520,6 @@
       } catch (e) { return false; }
     }
 
-    // 🌟 精確計算人事行政局上班日、假日、補假與微調
     function getDaysInMonthInfo(year, monthStr) {
       const y = parseInt(year, 10), m = parseInt(monthStr, 10);
       const daysInMonth = new Date(y, m, 0).getDate();
@@ -708,7 +716,6 @@
         closeReassignModal();
     }
 
-    // 全局套用任務改名與合併
     function applyTaskRenameAcrossMonth(oldName, newName) {
         const data = window.getComputedMonthData();
         data.computedDays.forEach(c => {
@@ -729,7 +736,6 @@
         window.silentSyncToCloud();
     }
 
-    // 🌟 全局套用整項「主任務」整組轉移至另一主任務 (保留來源主任務名稱與細項名稱)
     function applyMainTaskMergeAcrossMonth(sourceMainName, targetMainName) {
         const data = window.getComputedMonthData();
         data.computedDays.forEach(c => {
@@ -752,7 +758,6 @@
         window.silentSyncToCloud();
     }
 
-    // --- 支援「整項主任務」或「個別活動」拖曳歸類 ---
     window.handleDragStart = function(e, type, value) {
         window.currentDraggingType = type;
         window.currentDraggingValue = value;
@@ -972,7 +977,7 @@
         window.debounceAutoSaveCloudData();
     }
 
-    // --- 月曆完整繪製 ---
+    // --- 月曆完整繪製 (加入未填寫提示標記) ---
     function renderBigCalendar(daysInfo, computedDays) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -996,16 +1001,17 @@
                 bgClass = "bg-slate-900/60";
                 if(c.total > 0) statusBadge = `<div class="status-badge bg-emerald-900/50 text-emerald-400 border border-emerald-800 ml-auto">${c.total}h</div>`;
                 else {
-                    statusBadge = `<div class="status-badge bg-slate-800 text-slate-500 border border-slate-700 ml-auto">假日</div>`;
+                    statusBadge = `<div class="status-badge bg-slate-800 text-slate-500 border border-slate-700 ml-auto">休假/假日</div>`;
                     tasksPreview = `<div class="flex-1 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 text-blue-500"><span class="text-2xl font-black leading-none">+</span><span class="text-[9px] font-bold mt-1">新增工時</span></div>`;
                 }
             } else {
                 if (isEmpty) {
-                    bgClass = "bg-slate-800/60";
-                    hoverClass = "hover:bg-slate-700";
-                    statusBadge = `<div class="status-badge bg-amber-900/30 text-amber-500 ml-auto border border-amber-800/50">未填寫</div>`;
-                    numColor = "text-slate-500";
-                    tasksPreview = `<div class="flex-1 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 text-blue-400"><span class="text-2xl font-black leading-none">+</span><span class="text-[9px] font-bold mt-1">新增工時</span></div>`;
+                    // 平日且完全無工時：明顯黃色高亮警示
+                    bgClass = "bg-amber-950/20";
+                    hoverClass = "hover:bg-amber-900/40";
+                    statusBadge = `<div class="status-badge bg-amber-900/60 text-amber-300 ml-auto border border-amber-600/60 shadow-sm animate-pulse">⚠️ 未填 (颱風假?)</div>`;
+                    numColor = "text-amber-500/70";
+                    tasksPreview = `<div class="flex-1 flex flex-col items-center justify-center text-amber-500/80 group-hover:text-amber-300 transition"><span class="text-xs font-bold">完全無紀錄</span><span class="text-[9px] text-amber-400/60 mt-0.5">點擊補填或設為休假</span></div>`;
                 } else if (isUnder8) {
                     bgClass = "bg-rose-900/20";
                     hoverClass = "hover:bg-rose-900/40";
@@ -1056,6 +1062,29 @@
       window.silentSyncToCloud();
     }
 
+    // 🌟 平日未填寫偵測橫幅與快捷操作按鈕
+    function updateMissingWorkdayAlert(computedDays) {
+      const banner = document.getElementById("missingWorkdayBanner");
+      const listEl = document.getElementById("missingWorkdayList");
+      const btnsEl = document.getElementById("missingQuickActionBtns");
+      if (!banner || !listEl || !btnsEl) return;
+
+      const missingDays = computedDays.filter(c => c.isWorkday && c.tasks.length === 0);
+
+      if (missingDays.length > 0) {
+        banner.classList.remove("hidden");
+        listEl.innerText = missingDays.map(d => `${parseInt(d.mmdd.slice(0,2),10)}/${d.mmdd.slice(2,4)}`).join("、");
+        
+        btnsEl.innerHTML = missingDays.map(d => `
+          <button onclick="toggleDayStatus('${d.mmdd}', true)" class="px-2 py-1 rounded bg-amber-900/60 hover:bg-amber-800 border border-amber-600 text-amber-200 text-[10px] font-bold shadow-sm transition flex items-center gap-1">
+            <span>🌪️ 將 ${parseInt(d.mmdd.slice(0,2),10)}/${d.mmdd.slice(2,4)} 設為颱風假</span>
+          </button>
+        `).join("");
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+
     function renderWorkdayBadges(daysInfo, computedDays) {
       const badgesContainer = document.getElementById("workdayBadges");
       if(!badgesContainer) return;
@@ -1065,7 +1094,7 @@
         const hasData = cDay && cDay.tasks.length > 0;
 
         if (d.isWorkday) {
-          if (!hasData) { cls = "bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 cursor-pointer"; icon = "⚠️缺 "; }
+          if (!hasData) { cls = "bg-amber-950/60 text-amber-300 border-amber-600/80 hover:bg-amber-900/80 cursor-pointer animate-pulse"; icon = "⚠️未填 "; }
           else { cls = "bg-emerald-900/40 text-emerald-400 border-emerald-800 hover:bg-emerald-900/60 cursor-pointer"; }
         } else { 
             cls = "bg-slate-900 text-slate-500 border-slate-800 line-through cursor-pointer hover:bg-slate-800"; 
@@ -1187,16 +1216,16 @@
         return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, totalExclude, projectMap, allTasksMap };
     }
 
-    // 🌟 法定基準與扣除雙向驗算 J4 公式引擎
+    // 🌟 法定基準與扣除雙向驗算 J4 公式引擎 (加入未填寫天數警示連動)
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
         const workdays = data.daysInfo.totalWorkdays;
         const holidays = data.daysInfo.totalHolidays;
-        const stdBaseHours = workdays * 8; // 法定應出勤基準工時
-        const targetHours = +(stdBaseHours * 0.8).toFixed(2); // 80% 考核目標工時
+        const stdBaseHours = workdays * 8;
+        const targetHours = +(stdBaseHours * 0.8).toFixed(2);
 
-        const actualEffectiveHours = data.totalValid + data.totalOt; // 實際有效 + 加班
-        const totalDeductHours = data.totalLeave + data.totalInvalid + data.totalExclude; // 總扣除工時
+        const actualEffectiveHours = data.totalValid + data.totalOt;
+        const totalDeductHours = data.totalLeave + data.totalInvalid + data.totalExclude;
         const j4Percent = targetHours > 0 ? (actualEffectiveHours / targetHours) * 100 : 0;
         const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
@@ -1213,7 +1242,6 @@
         const cellH4 = document.getElementById("cellH4Input");
         if (cellH4) cellH4.value = h4Score === 120 ? 120 : Math.round(j4Percent);
         
-        // 條列扣除工時明細清單
         const deductItems = [];
         data.computedDays.forEach(c => {
             c.tasks.forEach(t => {
@@ -1229,7 +1257,12 @@
             deductSection = deductItems.join("\n");
         }
 
-        // 構造嚴謹的雙向驗算 J4 文字公式
+        const missingDays = data.computedDays.filter(c => c.isWorkday && c.tasks.length === 0);
+        let missingWarningText = "";
+        if (missingDays.length > 0) {
+            missingWarningText = `\n⚠️ 【備註提醒】：尚有 ${missingDays.map(d=>`${parseInt(d.mmdd.slice(0,2),10)}/${d.mmdd.slice(2,4)}`).join('、')} 共 ${missingDays.length} 天平日無工時紀錄，若為颱風天災假請於上方微調轉為免出勤。`;
+        }
+
         const cellJ4 = document.getElementById("cellJ4Input");
         if (cellJ4) {
             cellJ4.value = 
@@ -1245,13 +1278,14 @@ ${deductSection}
 • 實際有效工時：${actualEffectiveHours}h (實填有效 ${data.totalValid}h ＋ 加班 ${data.totalOt}h)
 • 雙向驗算：基準 ${stdBaseHours}h ＋ 加班 ${data.totalOt}h － 扣除 ${totalDeductHours}h ＝ ${stdBaseHours + data.totalOt - totalDeductHours}h
 • 財務構面達成率：(${actualEffectiveHours} / ${targetHours}) × 100% ＝ ${j4Percent.toFixed(2)}%
-• 財務構面得分：${h4Score === 120 ? '120分 (滿分上限120分)' : Math.round(j4Percent) + '分'}`;
+• 財務構面得分：${h4Score === 120 ? '120分 (滿分上限120分)' : Math.round(j4Percent) + '分'}${missingWarningText}`;
         }
 
         updateJ14TrainingBox(data.computedDays);
         renderBigCalendar(data.daysInfo, data.computedDays);
         renderProjectRanking(data.allTasksMap);
         renderWorkdayBadges(data.daysInfo, data.computedDays);
+        updateMissingWorkdayAlert(data.computedDays);
     }
 
     function updateJ14TrainingBox(computedDays) {
