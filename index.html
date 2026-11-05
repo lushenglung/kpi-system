@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.4 任務全拖曳整合版</p>
+          <p class="text-[10px] text-blue-400">v11.5 任務拖曳全名稱整合版</p>
         </div>
       </div>
       
@@ -116,7 +116,7 @@
         </div>
       </div>
 
-      <!-- 日期狀態微調盤 (點擊切換上班日 / 颱風假或休假) -->
+      <!-- 日期狀態微調盤 (遇颱風假點擊轉為休假) -->
       <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700 mb-4 flex items-center gap-3 overflow-x-auto">
         <span class="text-[10px] font-bold text-slate-400 shrink-0">📅 日期狀態微調 (遇颱風假點擊轉為休假)：</span>
         <div id="workdayBadges" class="flex flex-wrap gap-1.5"></div>
@@ -723,7 +723,7 @@
         window.silentSyncToCloud();
     }
 
-    // 全局套用整項「主任務」整組轉移至另一主任務
+    // 🌟 全局套用整項「主任務」整組轉移至另一主任務 (保留來源主任務名稱與細項名稱)
     function applyMainTaskMergeAcrossMonth(sourceMainName, targetMainName) {
         const data = window.getComputedMonthData();
         data.computedDays.forEach(c => {
@@ -732,7 +732,8 @@
                 let rawName = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
                 const { main, sub } = parseTaskCompound(rawName);
                 if (main === sourceMainName) {
-                    const finalSub = sub ? `${sourceMainName}_${sub}` : sourceMainName;
+                    // 若原本有細項活動，組合為「目標任務-來源任務：細項」；若無細項，則直接將來源主任務作為細項
+                    const finalSub = sub ? `${sourceMainName}：${sub}` : sourceMainName;
                     t.task = `${targetMainName}-${finalSub}`;
                     modified = true;
                 }
@@ -1100,7 +1101,7 @@
             if (!row) continue;
             let task = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : "";
             
-            // 🌟 優先抓取 C 欄 (row[2])，若無則備援抓取 D 欄 (row[3])
+            // 優先抓取 C 欄 (row[2])，若無則備援抓取 D 欄 (row[3])
             let rawHours = (row[2] !== undefined && row[2] !== null && row[2] !== "") ? row[2] : row[3];
             let hours = (rawHours !== undefined && rawHours !== null && rawHours !== "") ? parseFloat(rawHours) : 0;
             
@@ -1256,7 +1257,7 @@
       }
     }
 
-    // 🌟 支援整項「主任務」或「活動細項」的雙層拖曳排行榜
+    // 🌟 支援整項「主任務」或「活動細項」的雙層拖曳排行榜 (移除「主體執行」字樣，保留完整名稱)
     function renderProjectRanking(allTasksMap) {
         const rankListEl = document.getElementById("projectRankList");
         if (!rankListEl) return;
@@ -1284,7 +1285,8 @@
             if (subTask) {
                 groups[mainTask].items.push({ name: subTask, raw: rawName, hrs: hrs });
             } else {
-                groups[mainTask].items.push({ name: "主體執行", raw: rawName, hrs: hrs });
+                // 🌟 保留原始任務名稱，不寫死為「主體執行」
+                groups[mainTask].items.push({ name: rawName, raw: rawName, hrs: hrs });
             }
         });
 
@@ -1293,7 +1295,10 @@
         let html = "";
         sortedGroups.forEach(([mainName, data], idx) => {
             let subItemsHtml = "";
-            if (data.items.length > 1 || (data.items.length === 1 && data.items[0].name !== "主體執行")) {
+            // 當該主任務底下有多個子項目，或唯一的子項目名稱與主任務不完全相同時，展開次級清單
+            const hasDistinctSubs = data.items.length > 1 || (data.items.length === 1 && data.items[0].name !== mainName);
+            
+            if (hasDistinctSubs) {
                 subItemsHtml = `<ul class="mt-2 mb-2 ml-4 space-y-1.5 text-[10px] text-slate-400 border-l border-slate-700 pl-3">`;
                 data.items.sort((a,b) => b.hrs - a.hrs).forEach(item => {
                     subItemsHtml += `
