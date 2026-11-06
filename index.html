@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v12.1 一鍵還原原始Excel版</p>
+          <p class="text-[10px] text-blue-400">v12.2 行事曆最新狀態即時連動重整版</p>
         </div>
       </div>
       
@@ -160,9 +160,9 @@
           <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-extrabold text-slate-300">📊 當月任務總覽 (智慧合併)</h3>
-              <!-- 🌟 升級為「還原原始 Excel」按鈕 -->
-              <button onclick="resetToRawExcel()" class="text-slate-400 hover:text-emerald-400 p-1 rounded hover:bg-slate-800 transition text-xs flex items-center gap-1 font-bold" title="清除所有手動拖曳與改名，還原回 Excel 原始紀錄">
-                <span>🔄 還原</span>
+              <!-- 🌟 重新整理按鈕：即時連動行事曆最新名稱與工時 -->
+              <button onclick="refreshFromCalendar()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs flex items-center gap-1 font-bold" title="依據行事曆最新名稱與工時重新整理任務清單與J4">
+                <span>🔄 重新整理</span>
               </button>
             </div>
             <span class="text-[9px] text-slate-500">可拖曳整項任務或活動進行合併</span>
@@ -844,20 +844,8 @@
         }
     }
 
-    // --- 🌟 建議 B：一鍵清除自訂覆蓋，還原為原始 Excel 紀錄 ---
-    window.resetToRawExcel = function() {
-        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
-            return alert("目前尚未匯入任何 Excel 資料可供還原！");
-        }
-        if (!confirm("確定要清除本月所有手動拖曳、合併與自訂改名，還原回 Excel 原始紀錄嗎？\n(J6/J10/J11 草稿文字將予以保留)")) {
-            return;
-        }
-
-        window.manualOverrides = {};
-        if (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[window.activeYm]) {
-            window.cloudData.monthly[window.activeYm].manualOverrides = {};
-        }
-        
+    // 🌟 重新整理按鈕：依據行事曆最新手動編輯與工時狀態即時連動重新計算
+    window.refreshFromCalendar = function() {
         window.recalculateAndRenderAll();
         window.silentSyncToCloud();
     }
@@ -1178,7 +1166,7 @@
         window.cloudData.monthly[window.activeYm].manualOverrides = window.manualOverrides;
     }
 
-    // 🌟 Excel 上傳解析
+    // 🌟 Excel 上傳解析：自動更新行事曆並載入初始數據
     window.handleWorklogUpload = function(event) {
       const file = event.target.files[0];
       if (!file) return;
