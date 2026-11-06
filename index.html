@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v12.0 歷史天災核定與國定連假精準分離版</p>
+          <p class="text-[10px] text-blue-400">v12.1 一鍵還原原始Excel版</p>
         </div>
       </div>
       
@@ -160,8 +160,9 @@
           <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-extrabold text-slate-300">📊 當月任務總覽 (智慧合併)</h3>
-              <button onclick="recalculateAndRenderAll()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs" title="重新抓取日曆資料">
-                🔄
+              <!-- 🌟 升級為「還原原始 Excel」按鈕 -->
+              <button onclick="resetToRawExcel()" class="text-slate-400 hover:text-emerald-400 p-1 rounded hover:bg-slate-800 transition text-xs flex items-center gap-1 font-bold" title="清除所有手動拖曳與改名，還原回 Excel 原始紀錄">
+                <span>🔄 還原</span>
               </button>
             </div>
             <span class="text-[9px] text-slate-500">可拖曳整項任務或活動進行合併</span>
@@ -519,7 +520,6 @@
           const m = d.date.substring(4, 6);
           const mmdd = m + d.date.substring(6, 8);
           if (!holidaysByMonth[m]) holidaysByMonth[m] = {};
-          // 只記錄政府官方公告之國定假日與補假
           if (d.isHoliday) holidaysByMonth[m][mmdd] = true;
         });
         for (const [m, hMap] of Object.entries(holidaysByMonth)) {
@@ -555,16 +555,15 @@
         let isWorkday = !isWeekend && !isOfficialNationalHoliday;
         let isTyphoon = false;
 
-        // 如果在核定歷史颱風假清單中
+        // 若在核定歷史颱風假清單中
         if (isConfirmedTyphoon) {
           isWorkday = false;
           isTyphoon = true;
         }
 
-        // 檢查使用者在日曆上方的手動微調覆蓋
+        // 檢查手動微調
         if (userOverrides[mmdd] === "holiday") {
           isWorkday = false;
-          // 若原本是正常上班日被使用者轉休假，則視為天災停班
           if (!isWeekend && !isOfficialNationalHoliday) isTyphoon = true;
         } else if (userOverrides[mmdd] === "workday") {
           isWorkday = true;
@@ -843,6 +842,24 @@
             const newFullName = `${targetMainName}-${newSub}`;
             applyTaskRenameAcrossMonth(dragVal, newFullName);
         }
+    }
+
+    // --- 🌟 建議 B：一鍵清除自訂覆蓋，還原為原始 Excel 紀錄 ---
+    window.resetToRawExcel = function() {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+            return alert("目前尚未匯入任何 Excel 資料可供還原！");
+        }
+        if (!confirm("確定要清除本月所有手動拖曳、合併與自訂改名，還原回 Excel 原始紀錄嗎？\n(J6/J10/J11 草稿文字將予以保留)")) {
+            return;
+        }
+
+        window.manualOverrides = {};
+        if (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[window.activeYm]) {
+            window.cloudData.monthly[window.activeYm].manualOverrides = {};
+        }
+        
+        window.recalculateAndRenderAll();
+        window.silentSyncToCloud();
     }
 
     // --- 側邊抽屜任務編輯 ---
@@ -1281,7 +1298,6 @@
         const year = document.getElementById("yearSelect").value;
         const month = document.getElementById("monthSelect").value;
 
-        // 檢查工作表記錄中是否有填報「颱風假」
         let excelTyphoonDays = 0;
         data.computedDays.forEach(c => {
           if (c.tasks.some(t => (t.task || "").includes("颱風"))) {
