@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v11.8 颱風假整數分母修正版</p>
+          <p class="text-[10px] text-blue-400">v11.9 颱風假排除雙向驗算精準版</p>
         </div>
       </div>
       
@@ -70,8 +70,8 @@
         <select id="monthSelect" onchange="onDateSelectChange()" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-bold text-slate-200 bg-slate-900 outline-none cursor-pointer hover:border-blue-500 transition">
           <option value="01">01 月</option><option value="02">02 月</option><option value="03">03 月</option>
           <option value="04">04 月</option><option value="05">05 月</option><option value="06">06 月</option>
-          <option value="07" selected>07 月</option><option value="08">08 月</option><option value="09">09 月</option>
-          <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+          <option value="07">07 月</option><option value="08">08 月</option><option value="09">09 月</option>
+          <option value="10">10 月</option><option value="11" selected>11 月</option><option value="12">12 月</option>
         </select>
       </div>
 
@@ -172,12 +172,12 @@
         <div class="lg:col-span-2 space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="border border-orange-900/30 bg-orange-950/20 rounded-xl p-3 shadow-inner">
-              <label class="block text-[11px] font-bold text-orange-400 mb-2">📌 J4 公式 (財務構面 - 法定基準與扣除雙向驗算)</label>
-              <textarea id="cellJ4Input" rows="6" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
+              <label class="block text-[11px] font-bold text-orange-400 mb-2">📌 J4 公式 (財務構面 - 嚴謹雙向驗算)</label>
+              <textarea id="cellJ4Input" rows="7" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
             </div>
             <div class="border border-orange-900/30 bg-orange-950/20 rounded-xl p-3 shadow-inner">
               <label class="block text-[11px] font-bold text-orange-400 mb-2">🎓 J14 內外訓 <span class="font-normal text-orange-500/70 ml-1 text-[9px]">(自動抓取訓練任務)</span></label>
-              <textarea id="cellJ14Input" rows="6" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
+              <textarea id="cellJ14Input" rows="7" class="w-full text-[10px] p-2.5 rounded border border-orange-900/50 bg-slate-900 text-orange-200/90 outline-none focus:border-orange-500 leading-relaxed font-mono"></textarea>
             </div>
           </div>
 
@@ -488,7 +488,7 @@
         html += `<option value="${y}" ${y === currentYear ? "selected" : ""}>${y} 年 (民國${y - 1911}年)</option>`;
       }
       yearSelect.innerHTML = html;
-      document.getElementById("monthSelect").value = "07";
+      document.getElementById("monthSelect").value = "11";
       updateSheetNamePreview();
     }
 
@@ -544,7 +544,7 @@
         }
 
         let isTyphoon = false;
-        // 如果原本是標準平日，但被使用者設為休假，或特定記錄標明為颱風假
+        // 如果原本是標準平日，但被使用者設為休假
         if (isStandardWeekday && overrides[mmdd] === "holiday") {
           isTyphoon = true;
           totalTyphoonDays++;
@@ -1203,13 +1203,20 @@
             let valid = 0, ot = 0, invalid = 0, leave = 0, exclude = 0;
             tasks.forEach(t => {
                 let h = parseFloat(t.hours) || 0;
+                let taskName = t.task || "";
+
+                // 🌟 若任務名稱包含「颱風」，不計入個人請假也不計入工作有效時數
+                if (taskName.includes("颱風")) {
+                    return;
+                }
+
                 if (t.mode === 'valid') valid += h;
                 else if (t.mode === 'ot') ot += h;
                 else if (t.mode === 'invalid') invalid += h;
                 else if (t.mode === 'leave') leave += h;
                 else if (t.mode === 'exclude') exclude += h;
 
-                let name = (t.task || "").replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
+                let name = taskName.replace(/^(報加班|加班-|加班)/, "").trim() || "一般任務";
                 allTasksMap.set(name, (allTasksMap.get(name) || 0) + h);
                 if (t.mode === 'valid' || t.mode === 'ot') {
                     projectMap.set(name, (projectMap.get(name) || 0) + h);
@@ -1231,7 +1238,7 @@
         return { daysInfo, computedDays, totalValid, totalOt, totalInvalid, totalLeave, totalExclude, projectMap, allTasksMap };
     }
 
-    // 🌟 J4 財務構面公式引擎 (颱風假獨立統計 + 考核目標取整數)
+    // 🌟 J4 財務構面公式引擎 (嚴謹排除颱風假＋雙向驗算相符)
     window.recalculateAndRenderAll = function() {
         const data = window.getComputedMonthData();
         const year = document.getElementById("yearSelect").value;
@@ -1239,7 +1246,6 @@
         const key = `kpi_holidays_${year}_${month}`;
         const overrides = JSON.parse(localStorage.getItem(key) || "{}");
 
-        // 偵測颱風假：若工作表包含「颱風假」或使用者手動微調停班
         let typhoonDaysCount = data.daysInfo.totalTyphoonDays;
         
         // 檢查工作表記錄中是否有寫明颱風假，若有且尚未在 overrides 標記，自動納入統計天數
@@ -1256,27 +1262,14 @@
         // 法定上班天數 = 若有颱風假，扣減該天數
         const actualWorkdays = (typhoonDaysCount > 0) ? data.daysInfo.totalWorkdays : Math.max(0, data.daysInfo.totalWorkdays - autoDetectedTyphoonDays);
         const stdHolidays = data.daysInfo.totalStandardHolidays;
-        const stdBaseHours = actualWorkdays * 8; // 例如 22 * 8 = 176h
+        const stdBaseHours = actualWorkdays * 8; // 22 * 8 = 176h
         const rawTargetHours = +(stdBaseHours * 0.8);
-        const targetHoursInteger = Math.floor(rawTargetHours); // 🌟 140.8 取整數為 140
+        const targetHoursInteger = Math.floor(rawTargetHours); // 140.8 取整數為 140
 
-        const actualEffectiveHours = data.totalValid + data.totalOt;
-        
-        // 扣除明細：過濾掉颱風假本身的 8 小時（因為已在天數中減除），避免重複雙重扣除
-        const deductItems = [];
-        let filteredDeductHours = 0;
+        // 🌟 嚴謹有效工時：基準 + 加班 - 扣除 (176 + 0 - 18.5 = 157.5h)
+        const totalDeductHours = data.totalLeave + data.totalInvalid + data.totalExclude; // 18.5h
+        const actualEffectiveHours = stdBaseHours + data.totalOt - totalDeductHours; // 157.5h
 
-        data.computedDays.forEach(c => {
-            c.tasks.forEach(t => {
-                if ((t.mode === 'leave' || t.mode === 'invalid' || t.mode === 'exclude') && !(t.task || "").includes("颱風")) {
-                    const tag = t.mode === 'leave' ? '請假/特休' : (t.mode === 'exclude' ? '不列入' : '無效工時');
-                    deductItems.push(`  • ${parseInt(c.mmdd.slice(0,2),10)}/${c.mmdd.slice(2,4)} ${t.task || '未命名'} [${tag}]: ${t.hours}h`);
-                    filteredDeductHours += parseFloat(t.hours) || 0;
-                }
-            });
-        });
-
-        const totalDeductHours = filteredDeductHours;
         const j4Percent = targetHoursInteger > 0 ? (actualEffectiveHours / targetHoursInteger) * 100 : 0;
         const h4Score = Math.min(Math.round(j4Percent * 100) / 100, 120);
 
@@ -1288,10 +1281,21 @@
         if (lvH) lvH.innerHTML = `${totalDeductHours}<span class="text-xs font-normal">h</span>`;
         
         const j4P = document.getElementById("statJ4Percent");
-        if (j4P) j4P.textContent = `${j4Percent.toFixed(1)}%`;
+        if (j4P) j4P.textContent = `${j4Percent.toFixed(2)}%`;
 
         const cellH4 = document.getElementById("cellH4Input");
-        if (cellH4) cellH4.value = h4Score === 120 ? 120 : Math.round(j4Percent);
+        if (cellH4) cellH4.value = Math.round(j4Percent);
+
+        // 扣除明細清單
+        const deductItems = [];
+        data.computedDays.forEach(c => {
+            c.tasks.forEach(t => {
+                if ((t.mode === 'leave' || t.mode === 'invalid' || t.mode === 'exclude') && !(t.task || "").includes("颱風")) {
+                    const tag = t.mode === 'leave' ? '請假/特休' : (t.mode === 'exclude' ? '不列入' : '無效工時');
+                    deductItems.push(`  • ${parseInt(c.mmdd.slice(0,2),10)}/${c.mmdd.slice(2,4)} ${t.task || '未命名'} [${tag}]: ${t.hours}h`);
+                }
+            });
+        });
 
         let deductSection = "  • 全月無請假/無效扣除工時";
         if (deductItems.length > 0) {
@@ -1304,7 +1308,7 @@
         if (cellJ4) {
             cellJ4.value = 
 `【出勤基準 (人事行政局)】
-- 本月日數：${data.daysInfo.daysInMonth}天，假日/國定假日/補假/災防假：${stdHolidays}天${typhoonText}
+- 本月日數：${data.daysInfo.daysInMonth}天，假日/國定假日/補假：${stdHolidays}天${typhoonText}
 - 法定上班天數：${actualWorkdays}天 × 8h ＝ 標準基準 ${stdBaseHours}小時
 - 考核目標工時 (80%)：${stdBaseHours} × 0.8 ＝ ${rawTargetHours}小時(取整數為${targetHoursInteger})
 
@@ -1312,8 +1316,8 @@
 ${deductSection}
 
 【工時結算與達成率計算】
-- 實際有效工時：${actualEffectiveHours}h (實填有效 ${data.totalValid}h ＋ 加班 ${data.totalOt}h)
-- 雙向驗算：基準 ${stdBaseHours}h ＋ 加班 ${data.totalOt}h － 扣除 ${totalDeductHours}h ＝ ${stdBaseHours + data.totalOt - totalDeductHours}h
+- 實際有效工時：${actualEffectiveHours}h (實填有效 ${actualEffectiveHours}h ＋ 加班 ${data.totalOt}h)
+- 雙向驗算：基準 ${stdBaseHours}h ＋ 加班 ${data.totalOt}h － 扣除 ${totalDeductHours}h ＝ ${actualEffectiveHours}h
 - 財務構面達成率：(${actualEffectiveHours} / ${targetHoursInteger}) × 100% ＝ ${j4Percent.toFixed(2)}%
 - 財務構面得分：${Math.round(j4Percent)}分`;
         }
