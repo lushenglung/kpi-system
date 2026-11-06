@@ -37,7 +37,7 @@
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-inner tracking-tighter border border-blue-400/30">KPI</div>
         <div>
           <h1 class="text-base font-bold tracking-wide text-slate-100">工時 & KPI 自動填表系統</h1>
-          <p class="text-[10px] text-blue-400">v12.3 警示條排版修復與防呆旗艦版</p>
+          <p class="text-[10px] text-blue-400">v12.4 一鍵清除拖拉錯誤與防呆重整版</p>
         </div>
       </div>
       
@@ -116,7 +116,7 @@
         </div>
       </div>
 
-      <!-- 🌟 修復後防擠壓警示條 -->
+      <!-- 修復防擠壓警示條 -->
       <div id="missingWorkdayBanner" class="hidden mb-4 p-4 rounded-xl bg-amber-950/40 border border-amber-600/50 text-amber-300 text-xs flex flex-col gap-2.5 shadow-inner">
         <div class="flex items-start gap-2.5 w-full">
           <span class="text-base leading-none shrink-0 mt-0.5">⚠️</span>
@@ -163,8 +163,8 @@
           <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-extrabold text-slate-300">📊 當月任務總覽 (智慧合併)</h3>
-              <!-- 🌟 重新整理按鈕：即時連動行事曆最新名稱與工時 -->
-              <button onclick="refreshFromCalendar()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs flex items-center gap-1 font-bold" title="依據行事曆最新名稱與工時重新整理任務清單與J4">
+              <!-- 🌟 重新整理按鈕：一鍵清空拖拉合併暫存並還原試算表真實紀錄 -->
+              <button onclick="refreshFromCalendar()" class="text-slate-400 hover:text-blue-400 p-1 rounded hover:bg-slate-800 transition text-xs flex items-center gap-1 font-bold" title="清除拖拉合併錯誤，依原始試算表重新整理任務清單與J4">
                 <span>🔄 重新整理</span>
               </button>
             </div>
@@ -841,7 +841,22 @@
         }
     }
 
+    // 🌟 一鍵清空拖拉合併暫存，徹底還原回 Excel 原始紀錄
     window.refreshFromCalendar = function() {
+        if (!window.parsedSheetsData || window.parsedSheetsData.length === 0) {
+            return alert("目前尚未匯入任何試算表資料！");
+        }
+        if (!confirm("確定要清除本月所有的拖拉合併與手動改名，恢復為 Excel 最初紀錄嗎？\n(J6/J10/J11 草稿文字將予以保留)")) {
+            return;
+        }
+
+        // 徹底清空本地與雲端覆蓋暫存
+        window.manualOverrides = {};
+        if (window.cloudData && window.cloudData.monthly && window.cloudData.monthly[window.activeYm]) {
+            window.cloudData.monthly[window.activeYm].manualOverrides = {};
+        }
+
+        // 以原始試算表重新計算並即時渲染
         window.recalculateAndRenderAll();
         window.silentSyncToCloud();
     }
@@ -1107,7 +1122,6 @@
       window.silentSyncToCloud();
     }
 
-    // 🌟 修復防呆警示條：文字自動折行、超過5天自動收合、不塞爆按鈕
     function updateMissingWorkdayAlert(computedDays) {
       const banner = document.getElementById("missingWorkdayBanner");
       const listEl = document.getElementById("missingWorkdayList");
@@ -1116,7 +1130,6 @@
 
       const missingDays = computedDays.filter(c => c.isWorkday && c.tasks.length === 0);
 
-      // 當完全無資料（例如剛切換月份，未填天數大於等於當月平日的一半）時，自動隱藏警示條，避免版面混亂
       if (missingDays.length === 0 || missingDays.length >= 10) {
         banner.classList.add("hidden");
         return;
@@ -1125,7 +1138,6 @@
       banner.classList.remove("hidden");
       listEl.innerText = missingDays.map(d => `${parseInt(d.mmdd.slice(0,2),10)}/${d.mmdd.slice(2,4)}`).join("、");
       
-      // 若天數適中（1 ~ 5天），顯示直覺按鈕；若大於5天，以精簡文字提示日曆上方點選
       if (missingDays.length <= 5) {
         btnsEl.innerHTML = missingDays.map(d => `
           <button onclick="toggleDayStatus('${d.mmdd}', true)" class="px-2.5 py-1 rounded bg-amber-900/60 hover:bg-amber-800 border border-amber-600/80 text-amber-200 text-[10px] font-bold shadow-sm transition flex items-center gap-1">
